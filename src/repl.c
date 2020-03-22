@@ -5,11 +5,49 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 // editline
 #include <editline/readline.h>
 //#include <editline/history.h>
 // MPC library 
 #include "mpc.h"
+
+// eval functions 
+long eval_op(long x, char* op, long y)
+{
+    if(strncmp(op, "+", 1) == 0)
+        return x + y;
+    if(strncmp(op, "-", 1) == 0)
+        return x - y;
+    if(strncmp(op, "*", 1) == 0)
+        return x * y;
+    if(strncmp(op, "/", 1) == 0)
+        return x / y;
+
+    return 0;
+}
+
+
+long eval(mpc_ast_t* ast)
+{
+    // If tagged as a number, return directly 
+    if(strstr(ast->tag, "number"))
+        return atoi(ast->contents);
+
+    // operator is always the second child
+    char* op = ast->children[1]->contents;
+    long  x  = eval(ast->children[2]);  
+
+    // iterate over the remaining children and combine
+    int i = 3;
+    while(strstr(ast->children[i]->tag, "expr"))
+    {
+        x = eval_op(x, op, eval(ast->children[i]));
+        i++;
+    }
+
+    return x;
+}
 
 
 int main(int argc, char *argv[])
@@ -50,8 +88,10 @@ int main(int argc, char *argv[])
         mpc_result_t r;
         if(mpc_parse("<stdin>", input, Lispy, &r))
         {
-            // on success we print the AST
-            mpc_ast_print(r.output);
+            // on success we eval the AST
+            //mpc_ast_print(r.output);
+            long result = eval(r.output);
+            fprintf(stdout, "%li\n", result);
             mpc_ast_delete(r.output);
         }
         else
