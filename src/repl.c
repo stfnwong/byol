@@ -6,8 +6,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 // editline
-#include <readline/readline.h>
-#include <readline/history.h>
+#include <editline/readline.h>
+//#include <editline/history.h>
 // MPC library 
 #include "mpc.h"
 

@@ -15,7 +15,7 @@ OPT=-O0
 CFLAGS += -Wall -g2 -std=c99 -D_REENTRANT $(OPT)
 CFLAGS += 
 LDFLAGS=
-LIBS=-lm -lreadline
+LIBS=-lm -ledit
 TEST_LIBS=-lcheck
 
 INCS=-I$(SRC_DIR)
