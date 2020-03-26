@@ -3,6 +3,7 @@
  * The main loop for the Lisp interpreter
  */
 
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -11,6 +12,8 @@
 //#include <editline/history.h>
 // MPC library 
 #include "mpc.h"
+
+// TODO : min(), max()
 
 // eval functions 
 long eval_op(long x, char* op, long y)
@@ -24,6 +27,12 @@ long eval_op(long x, char* op, long y)
     if(strncmp(op, "/", 1) == 0)
         return x / y;
 
+    // Modulo division
+    if(strncmp(op, "%", 1) == 0)
+        return x % y;
+    if(strncmp(op, "^", 1) == 0)
+        return pow(x, y);
+
     return 0;
 }
 
@@ -35,6 +44,7 @@ long eval(mpc_ast_t* ast)
         return atoi(ast->contents);
 
     // operator is always the second child
+    // NOTE: is this really true?
     char* op = ast->children[1]->contents;
     long  x  = eval(ast->children[2]);  
 
@@ -42,6 +52,8 @@ long eval(mpc_ast_t* ast)
     int i = 3;
     while(strstr(ast->children[i]->tag, "expr"))
     {
+        // TODO : add negative operator (unary '-')
+        // TODO: recursively break down min and max into binary ops...
         x = eval_op(x, op, eval(ast->children[i]));
         i++;
     }
@@ -70,7 +82,7 @@ int main(int argc, char *argv[])
     mpca_lang(MPCA_LANG_DEFAULT,
       "                                                     \
         number   : /-?[0-9]+/ ;                             \
-        operator : '+' | '-' | '*' | '/' ;                  \
+        operator : '+' | '-' | '*' | '/' | '^' | '%';                  \
         expr     : <number> | '(' <operator> <expr>+ ')' ;  \
         lispy    : /^/ <operator> <expr>+ /$/ ;             \
       ",
