@@ -1,3 +1,6 @@
 # Ignore swap files 
 *.swp
 *.swo
+
+# Ignore ctags file 
+tags

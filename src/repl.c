@@ -13,47 +13,171 @@
 // MPC library 
 #include "mpc.h"
 
-// TODO : min(), max()
-
-// eval functions 
-long eval_op(long x, char* op, long y)
+// list of valid lval types
+typedef enum 
 {
-    if(strncmp(op, "+", 1) == 0)
-        return x + y;
-    if(strncmp(op, "-", 1) == 0)
-        return x - y;
-    if(strncmp(op, "*", 1) == 0)
-        return x * y;
-    if(strncmp(op, "/", 1) == 0)
-        return x / y;
+    LVAL_NUM,
+    LVAL_ERR
+} lval_type;
 
-    // Modulo division
-    if(strncmp(op, "%", 1) == 0)
-        return x % y;
-    if(strncmp(op, "^", 1) == 0)
-        return pow(x, y);
+// lval errors
+typedef enum
+{
+    LERR_NONE,
+    LERR_DIV_ZERO,
+    LERR_BAD_OP,
+    LERR_BAD_NUM
+} lval_err_type;
 
-    return 0;
+// Lisp value 
+typedef struct 
+{
+    int type;
+    long num;
+    int err;
+} lval;
+
+
+/* 
+ * lval_num()
+ * Construct a numeric lval
+ */
+lval lval_num(long x)
+{
+    lval val;
+
+    val.type = LVAL_NUM;
+    val.num  = x;
+    val.err  = LERR_NONE;
+
+    return val;
+}
+
+/*
+ * lval_err()
+ * Construct an error lval
+ */
+lval lval_err(int e)
+{
+    lval val;
+
+    val.type = LVAL_ERR;
+    val.num  = 0;
+    val.err  = e;
+
+    return val;
+}
+
+/*
+ * lval_print()
+ */
+void lval_print(lval v)
+{
+    switch(v.type)
+    {
+        case LVAL_NUM:
+            fprintf(stdout, "%li", v.num);
+            break;
+
+        case LVAL_ERR:
+            switch(v.err)
+            {
+                case LERR_DIV_ZERO:
+                    fprintf(stdout, "ERROR: division by zero");
+                    break;
+
+                case LERR_BAD_OP:
+                    fprintf(stdout, "ERROR: Invalid operator");
+                    break;
+
+                case LERR_BAD_NUM:
+                    fprintf(stdout, "ERROR: Invalid number");
+                    break;
+            }
+            break;
+    }
+}
+
+/*
+ * lval_println()
+ */
+void lval_println(lval v)
+{
+    lval_print(v);
+    putchar('\n');
 }
 
 
-long eval(mpc_ast_t* ast)
+// TODO : min(), max()
+
+
+/*
+ * eval_op()
+ */
+lval eval_op(lval x, char* op, lval y)
+{
+    // handle errors 
+    if(x.type == LVAL_ERR)
+        return x;
+    if(y.type == LVAL_ERR)
+        return y;
+
+    // DEBUG 
+    //fprintf(stdout, "[%s] evaluating operator %c for inputs (%li, %li)\n",
+    //       __func__, *op, x.num, y.num
+    //);
+    
+    // handle operators 
+    if(strncmp(op, "+", 1) == 0)
+        return lval_num(x.num + y.num);
+    if(strncmp(op, "-", 1) == 0)
+        return lval_num(x.num - y.num);
+    if(strncmp(op, "*", 1) == 0)
+        return lval_num(x.num * y.num);
+    if(strncmp(op, "/", 1) == 0)
+    {
+        if(y.num == 0)
+            return lval_err(LERR_DIV_ZERO);
+        else
+            return lval_num(x.num / y.num);
+    }
+
+    // Modulo division
+    if(strncmp(op, "%", 1) == 0)
+        return lval_num(x.num % y.num);
+    if(strncmp(op, "^", 1) == 0)
+        return lval_num(pow(x.num, y.num));
+
+    return lval_err(LERR_BAD_OP);
+}
+
+
+/*
+ * eval()
+ */
+lval eval(mpc_ast_t* ast)
 {
     // If tagged as a number, return directly 
     if(strstr(ast->tag, "number"))
-        return atoi(ast->contents);
+    {
+        errno = 0;
+        long x = strtol(ast->contents, NULL, 10);
+        if(errno == ERANGE)
+            return lval_err(LERR_BAD_NUM);
+        else
+            return lval_num(x);
+    }
 
     // operator is always the second child
     // NOTE: is this really true?
     char* op = ast->children[1]->contents;
-    long  x  = eval(ast->children[2]);  
+    lval  x  = eval(ast->children[2]);  
 
     // iterate over the remaining children and combine
     int i = 3;
     while(strstr(ast->children[i]->tag, "expr"))
     {
         // TODO : add negative operator (unary '-')
-        // TODO: recursively break down min and max into binary ops...
         x = eval_op(x, op, eval(ast->children[i]));
         i++;
     }
@@ -102,8 +226,8 @@ int main(int argc, char *argv[])
         {
             // on success we eval the AST
             //mpc_ast_print(r.output);
-            long result = eval(r.output);
-            fprintf(stdout, "%li\n", result);
+            lval result = eval(r.output);
+            lval_println(result);
             mpc_ast_delete(r.output);
         }
         else
