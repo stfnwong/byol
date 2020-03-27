@@ -1,6 +1,6 @@
 # LISP INTERPRETER
 
-![*An artists impression of a typical SCIP reader*](doc/scip-lord.jpeg')
+![*An artists impression of a typical SCIP reader*](doc/scip-lord.jpeg)
 ##### *An artists impression of a typical SCIP reader in the wild*
 
 This is me following the [Build Your Own Lisp](http://www.buildyourownlisp.com/) book and building a LISP. 
