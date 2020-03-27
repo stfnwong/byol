@@ -117,8 +117,9 @@ int main(int argc, char *argv[])
         number   : /-?[0-9]+/  ;                              \
         decimal  : /-?([0-9]*[.])?[0-9]+/  ;                  \
         symbol   : '+' | '-' | '*' | '/' | '^' | '%' |        \
-                   \"min\" | \"max\" | \"join\" | \"head\" |  \
-                   \"tail\" | \"eval\" | \"list\"   ;         \
+                  \"min\" | \"max\" | \"join\" | \"head\" |   \
+                  \"tail\" | \"eval\" | \"list\" | \"cons\" | \
+                  \"len\"                                  ;  \
         sexpr    : '(' <expr>* ')';                           \
         qexpr    : '{' <expr>* '}';                           \
         expr     : <number> | <symbol> | <sexpr> | <qexpr> ;  \

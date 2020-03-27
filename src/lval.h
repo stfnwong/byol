@@ -108,16 +108,22 @@ lval* lval_builtin_list(lval* val);
  */
 lval* lval_builtin_eval(lval* val);
 /*
+ * lval_builtin_join()
+ * Take a QExpr and return its last element as a QExpr
+ */
+lval* lval_builtin_join(lval* val);
+/*
+ * lval_builtin_cons()
+ * Takes a value and a QExpr and appends the value to the front
+ */
+lval* lval_builtin_cons(lval* val);
+
+/*
  * lval_join()  
  * Inner function for join
  */
 lval* lval_join(lval* a, lval* b);
 
-/*
- * lval_builtin_join()
- * Take a QExpr and return its last element as a QExpr
- */
-lval* lval_builtin_join(lval* val);
 /*
  * lval_builtin()
  * Dispatch on the various builtins
