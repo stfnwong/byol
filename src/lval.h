@@ -15,7 +15,8 @@ typedef enum
     LVAL_NUM,
     LVAL_DECIMAL,
     LVAL_SYM,
-    LVAL_SEXPR
+    LVAL_SEXPR,
+    LVAL_QEXPR
 } lval_type;
 
 // lval errors
@@ -51,6 +52,8 @@ lval* lval_decimal(double x);
 lval* lval_err(char* m);
 lval* lval_sym(char* s);
 lval* lval_sexpr(void);
+lval* lval_qexpr(void);
+
 /*
  * lval_del()
  * Cleanup memory allocated to an LVAL
@@ -82,6 +85,43 @@ lval* lval_take(lval* val, int idx);
  * Evaluate a builtin operator
  */
 lval* lval_builtin_op(lval* val, char* op);
+/*
+ * lval_builtin_head()
+ * Take a QExpr and return its first element as a QExpr
+ */
+lval* lval_builtin_head(lval* val);
+/*
+ * lval_builtin_tail()
+ * Take a QExpr and return its last element as a QExpr
+ */
+lval* lval_builtin_tail(lval* val);
+/*
+ * lval_builtin_list()
+ * Take an SExpr and return a QExpr
+ */
+lval* lval_builtin_list(lval* val);
+/*
+ * lval_builtin_eval()
+ */
+lval* lval_builtin_eval(lval* val);
+/*
+ * lval_join()  
+ * Inner function for join
+ */
+lval* lval_join(lval* a, lval* b);
+
+/*
+ * lval_builtin_join()
+ * Take a QExpr and return its last element as a QExpr
+ */
+lval* lval_builtin_join(lval* val);
+/*
+ * lval_builtin()
+ * Dispatch on the various builtins
+ */
+lval* lval_builtin(lval* val, char* op);
+
+
 /*
  * lval_eval_sexpr()
  */

@@ -91,6 +91,14 @@ lval* lval_sexpr(void)
     return __lval_create(0, 0.0f, NULL, NULL, LVAL_SEXPR);
 }
 
+/*
+ * lval_qexpr()
+ */
+lval* lval_qexpr(void)
+{
+    return __lval_create(0, 0.0f, NULL, NULL, LVAL_QEXPR);
+}
+
 
 /*
  * lval_del()
@@ -108,6 +116,7 @@ void lval_del(lval* val)
             free(val->sym);
             break;
         case LVAL_SEXPR:
+        case LVAL_QEXPR:
             for(int i = 0; i < val->count; ++i)
             {
                 lval_del(val->cell[i]);
@@ -115,7 +124,6 @@ void lval_del(lval* val)
             free(val->cell);
             break;
     }
-
     free(val);
 }
 
@@ -140,6 +148,10 @@ void lval_print(lval* v)
             
         case LVAL_SEXPR:
             lval_sexpr_print(v, '(', ')');
+            break;
+
+        case LVAL_QEXPR:
+            lval_sexpr_print(v, '{', '}');
             break;
     }
 }
@@ -258,12 +270,169 @@ lval* lval_builtin_op(lval* val, char* op)
         // Power
         if(strncmp(op, "^", 1) == 0)
             x->num = pow(x->num, y->num);
+        // min function
+        if(strncmp(op, "min", 3) == 0)
+            x->num = (x->num <= y->num) ? x->num : y->num;
+        // max function
+        if(strncmp(op, "max", 3) == 0)
+            x->num = (x->num >= y->num) ? x->num : y->num;
 
         lval_del(y);
     }
     lval_del(val);
 
     return x;
+}
+
+// TODO : add assert macro later
+
+/*
+ * lval_builtin_head()
+ */
+lval* lval_builtin_head(lval* val)
+{
+    if(val->count != 1)
+    {
+        lval_del(val);
+        return lval_err("[head] passed too many arguments");
+    }
+
+    if(val->cell[0]->type != LVAL_QEXPR)
+    {
+        lval_del(val);
+        return lval_err("[head] passed incorrect type (must be qexpr)");
+    }
+
+    if(val->cell[0]->count == 0)
+    {
+        lval_del(val);
+        return lval_err("[head] passed {}");
+    }
+
+    // now take first argument
+    lval* v = lval_take(val, 0);
+    // remove all non-head elements and return
+    while(v->count > 1)
+    {
+        lval_del(lval_pop(v, 1));
+    }
+
+    return v;
+}
+
+/*
+ * lval_builtin_tail()
+ */
+lval* lval_builtin_tail(lval* val)
+{
+    if(val->count != 1)
+    {
+        lval_del(val);
+        return lval_err("[tail] passed too many arguments");
+    }
+
+    if(val->cell[0]->type != LVAL_QEXPR)
+    {
+        lval_del(val);
+        return lval_err("[tail] passed incorrect type (must be qexpr)");
+    }
+
+    if(val->cell[0]->count == 0)
+    {
+        lval_del(val);
+        return lval_err("[tail] passed {}");
+    }
+
+    lval* v = lval_take(val, 0);
+    // delete first element and return 
+    lval_del(lval_pop(v, 0));
+
+    return v;
+}
+
+/*
+ * lval_builtin_list()
+ */
+lval* lval_builtin_list(lval* val)
+{
+    val->type = LVAL_QEXPR;
+    return val;
+}
+
+/*
+ * lval_builtin_eval()
+ */
+lval* lval_builtin_eval(lval* val)
+{
+    if(val->count != 1)
+    {
+        lval_del(val);
+        return lval_err("[list] passed too many arguments");
+    }
+    if(val->cell[0]->type != LVAL_QEXPR)
+    {
+        lval_del(val);
+        return lval_err("[list] passed incorrect type (must be qexpr)");
+    }
+
+    lval* x = lval_take(val, 0);
+    x->type = LVAL_SEXPR;
+
+    return lval_eval(x);
+}
+
+/*
+ * lval_join()
+ */
+lval* lval_join(lval* a, lval* b)
+{
+    while(b->count)
+        a = lval_add(a, lval_pop(b, 0));
+
+    lval_del(b);
+    return a;
+}
+
+/*
+ * lval_builtin_join()
+ */
+lval* lval_builtin_join(lval* val)
+{
+    for(int i = 0; i < val->count; ++i)
+    {
+        if(val->cell[0]->type != LVAL_QEXPR)
+            return lval_err("[join] passed incorrect type (must be qexpr)");
+    }
+
+    lval* v = lval_pop(val, 0);
+    // join up all the elements of val
+    while(val->count)
+        v = lval_join(v, lval_pop(val, 0));
+    lval_del(val);
+
+    return v;
+}
+
+/*
+ * lval_builtin()
+ */
+lval* lval_builtin(lval* val, char* func)
+{
+    if(strncmp(func, "list", 4) == 0)
+        return lval_builtin_list(val);
+    if(strncmp(func, "head", 4) == 0)
+        return lval_builtin_head(val);
+    if(strncmp(func, "tail", 4) == 0)
+        return lval_builtin_tail(val);
+    if(strncmp(func, "join", 4) == 0)
+        return lval_builtin_join(val);
+    if(strncmp(func, "eval", 4) == 0)
+        return lval_builtin_eval(val);
+    if(strstr("+-/*", func))
+        return lval_builtin_op(val, func);
+    lval_del(val);
+
+    return lval_err("Unknown function");
 }
 
 /*
@@ -300,7 +469,7 @@ lval* lval_eval_sexpr(lval* val)
     }
 
     // call builtin with operator
-    lval* result = lval_builtin_op(val, f->sym);
+    lval* result = lval_builtin(val, f->sym);
     lval_del(f);
     
     return result;

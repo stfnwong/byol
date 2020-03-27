@@ -4,3 +4,6 @@
 
 # Ignore ctags file 
 tags
+
+# Ignore core dumps
+vgcore*

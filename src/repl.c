@@ -73,6 +73,8 @@ lval* lval_read(mpc_ast_t* ast)
         val = lval_sexpr();
     if(strstr(ast->tag, "sexpr"))
         val = lval_sexpr();
+    if(strstr(ast->tag, "qexpr"))
+        val = lval_qexpr();
 
     // Fill the list with valid expressions in the sexpr
     for(int i = 0; i < ast->children_num; ++i)
@@ -88,7 +90,6 @@ lval* lval_read(mpc_ast_t* ast)
             continue;
         if(strncmp(ast->children[i]->tag, "regex", 5) == 0)
             continue;
-
         val = lval_add(val, lval_read(ast->children[i]));
     }
 
@@ -106,22 +107,25 @@ int main(int argc, char *argv[])
     mpc_parser_t* Decimal = mpc_new("decimal");
     mpc_parser_t* Symbol  = mpc_new("symbol");
     mpc_parser_t* Sexpr   = mpc_new("sexpr");
+    mpc_parser_t* Qexpr   = mpc_new("qexpr");
     mpc_parser_t* Expr    = mpc_new("expr");
     mpc_parser_t* Lispy   = mpc_new("lispy");
 
     /* Define them with the following Language */
     mpca_lang(MPCA_LANG_DEFAULT,
-      "                                               \
-        number   : /-?[0-9]+/  ;                      \
-        decimal  : /-?([0-9]*[.])?[0-9]+/  ;             \
-        symbol   : '+' | '-' | '*' | '/' | '^' | '%'; \
-        sexpr    : '(' <expr>* ')';                   \
-        expr     : <number> | <symbol> | <sexpr> ;    \
-        lispy    : /^/ <expr>* /$/ ;       \
+      "                                                       \
+        number   : /-?[0-9]+/  ;                              \
+        decimal  : /-?([0-9]*[.])?[0-9]+/  ;                  \
+        symbol   : '+' | '-' | '*' | '/' | '^' | '%' |        \
+                   \"min\" | \"max\" | \"join\" | \"head\" |  \
+                   \"tail\" | \"eval\" | \"list\"   ;         \
+        sexpr    : '(' <expr>* ')';                           \
+        qexpr    : '{' <expr>* '}';                           \
+        expr     : <number> | <symbol> | <sexpr> | <qexpr> ;  \
+        lispy    : /^/ <expr>* /$/ ;                          \
       ",
-      Number, Decimal, Symbol, Sexpr, Expr, Lispy
+      Number, Decimal, Symbol, Sexpr, Qexpr, Expr, Lispy
     );
-
 
     // main loop
     while(1)
@@ -138,19 +142,17 @@ int main(int argc, char *argv[])
             x = lval_eval(x);
             lval_println(x);
             lval_del(x);
-
         }
         else
         {
             mpc_err_print(r.error);
             mpc_err_delete(r.error);
         }
-
         free(input);
     }
 
     // cleanup parsers 
-    mpc_cleanup(6, Number, Decimal, Symbol, Expr, Sexpr, Lispy);
+    mpc_cleanup(6, Number, Decimal, Symbol, Sexpr, Qexpr, Expr, Lispy);
 
     return 0;
 }
