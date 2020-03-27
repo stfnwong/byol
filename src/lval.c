@@ -8,13 +8,11 @@
 #include <string.h>
 #include "lval.h"
 
-// TODO; factor out common part of implementation
-
-/* 
- * lval_num()
- * Construct a numeric lval
+/*
+ * __lval_create()
+ * Private lval constructor
  */
-lval* lval_num(long x)
+lval* __lval_create(long num, char* m, char* s, int type)
 {
     lval* val;
 
@@ -26,14 +24,37 @@ lval* lval_num(long x)
         );
         return NULL;
     }
-    val->type  = LVAL_NUM;
-    val->num   = x;
-    val->err   = NULL;
-    val->sym   = NULL;
+    val->type  = type;
+    val->num   = num;
+    if(m != NULL)
+    {
+        val->err = malloc(strlen(m) + 1);
+        strcpy(val->err, m);
+    }
+    else
+        val->err   = NULL;
+    if(s != NULL)
+    {
+        val->sym = malloc(strlen(s) + 1);
+        strcpy(val->sym, s);
+    }
+    else
+        val->sym   = NULL;
+
     val->count = 0;
     val->cell  = NULL;
 
     return val;
+}
+
+
+/* 
+ * lval_num()
+ * Construct a numeric lval
+ */
+lval* lval_num(long x)
+{
+    return __lval_create(x, NULL, NULL, LVAL_NUM);
 }
 
 /*
@@ -42,26 +63,7 @@ lval* lval_num(long x)
  */
 lval* lval_err(char* m)
 {
-    lval* val;
-
-    val = malloc(sizeof(*val));
-    if(!val)
-    {
-        fprintf(stdout, "[%s] failed to allocate %ld bytes for lval\n", 
-                __func__, sizeof(*val)
-        );
-        return NULL;
-    }
-
-    val->type  = LVAL_ERR;
-    val->num   = 0;
-    val->err   = malloc(strlen(m) + 1);
-    val->sym   = NULL;
-    val->count = 0;
-    val->cell  = NULL;
-    strcpy(val->err, m);
-
-    return val;
+    return __lval_create(0, m, NULL, LVAL_ERR);
 }
 
 /*
@@ -69,26 +71,7 @@ lval* lval_err(char* m)
  */
 lval* lval_sym(char* s)
 {
-    lval* val;
-
-    val = malloc(sizeof(*val));
-    if(!val)
-    {
-        fprintf(stdout, "[%s] failed to allocate %ld bytes for lval\n", 
-                __func__, sizeof(*val)
-        );
-        return NULL;
-    }
-
-    val->type  = LVAL_SYM;
-    val->num   = 0;
-    val->err   = NULL;
-    val->sym   = malloc(strlen(s) + 1);
-    val->count = 0;
-    val->cell  = NULL;
-    strcpy(val->sym, s);
-
-    return val;
+    return __lval_create(0, NULL, s, LVAL_SYM);
 }
 
 /*
@@ -96,24 +79,7 @@ lval* lval_sym(char* s)
  */
 lval* lval_sexpr(void)
 {
-    lval* val;
-
-    val = malloc(sizeof(*val));
-    if(!val)
-    {
-        fprintf(stdout, "[%s] failed to allocate %ld bytes for lval\n", 
-                __func__, sizeof(*val)
-        );
-        return NULL;
-    }
-
-    val->type = LVAL_SEXPR;
-    val->num   = 0;
-    val->err   = NULL;
-    val->sym   = NULL;
-    val->count = 0;
-    val->cell  = NULL;
-    val->count =  0;
+    return __lval_create(0, NULL, NULL, LVAL_SEXPR);
 }
 
 
@@ -177,58 +143,6 @@ void lval_println(lval* v)
 {
     lval_print(v);
     fprintf(stdout, "\n");
-}
-
-/*
- * lval_read_num()
- */
-lval* lval_read_num(mpc_ast_t* ast)
-{
-    errno = 0;
-    long x = strtol(ast->contents, NULL, 10);
-    if(errno == ERANGE)
-        return lval_err("Invalid number");
-    else
-        return lval_num(x);
-}
-
-/*
- * lval_read()
- */
-lval* lval_read(mpc_ast_t* ast)
-{
-    // If input is a symbol or a number then return a conversion to that type
-    if(strstr(ast->tag, "number"))
-        return lval_read_num(ast);
-    if(strstr(ast->tag, "symbol"))
-        return lval_sym(ast->contents);
-
-    // If this is the root (>) or an S-expr then create an empty list 
-    lval* val = NULL;
-    if(strncmp(ast->tag, ">", 1) == 0)
-        val = lval_sexpr();
-    if(strstr(ast->tag, "sexpr"))
-        val = lval_sexpr();
-
-    // Fill the list with valid expressions in the sexpr
-    for(int i = 0; i < ast->children_num; ++i)
-    {
-        // unpack parens
-        if(strncmp(ast->children[i]->contents, "(", 1) == 0)
-            continue;
-        if(strncmp(ast->children[i]->contents, ")", 1) == 0)
-            continue;
-        if(strncmp(ast->children[i]->contents, "{", 1) == 0)
-            continue;
-        if(strncmp(ast->children[i]->contents, "}", 1) == 0)
-            continue;
-        if(strncmp(ast->children[i]->tag, "regex", 5) == 0)
-            continue;
-
-        val = lval_add(val, lval_read(ast->children[i]));
-    }
-
-    return val;
 }
 
 /*

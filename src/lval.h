@@ -43,8 +43,6 @@ struct lval
 };
 
 
-// TODO : factor out common stuff into something like __lval_builder()
-
 // lval constructors
 lval* lval_num(long x);
 lval* lval_err(char* m);
@@ -56,9 +54,10 @@ void  lval_del(lval* val);
 void  lval_print(lval* v);
 void  lval_println(lval* v);
 
-// Convert MPC expressions to lvals
-lval* lval_read_num(mpc_ast_t* ast);
-lval* lval_read(mpc_ast_t* ast);
+/*
+ * lval_add()
+ * Append an lval to another lval
+ */
 lval* lval_add(lval* v, lval* x);
 
 /*

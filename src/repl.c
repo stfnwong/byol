@@ -19,6 +19,61 @@
 
 // TODO : min(), max()
 
+// Convert MPC expressions to lvals
+lval* lval_read_num(mpc_ast_t* ast);
+lval* lval_read(mpc_ast_t* ast);
+
+/*
+ * lval_read_num()
+ */
+lval* lval_read_num(mpc_ast_t* ast)
+{
+    errno = 0;
+    long x = strtol(ast->contents, NULL, 10);
+    if(errno == ERANGE)
+        return lval_err("Invalid number");
+    else
+        return lval_num(x);
+}
+
+/*
+ * lval_read()
+ */
+lval* lval_read(mpc_ast_t* ast)
+{
+    // If input is a symbol or a number then return a conversion to that type
+    if(strstr(ast->tag, "number"))
+        return lval_read_num(ast);
+    if(strstr(ast->tag, "symbol"))
+        return lval_sym(ast->contents);
+
+    // If this is the root (>) or an S-expr then create an empty list 
+    lval* val = NULL;
+    if(strncmp(ast->tag, ">", 1) == 0)
+        val = lval_sexpr();
+    if(strstr(ast->tag, "sexpr"))
+        val = lval_sexpr();
+
+    // Fill the list with valid expressions in the sexpr
+    for(int i = 0; i < ast->children_num; ++i)
+    {
+        // unpack parens
+        if(strncmp(ast->children[i]->contents, "(", 1) == 0)
+            continue;
+        if(strncmp(ast->children[i]->contents, ")", 1) == 0)
+            continue;
+        if(strncmp(ast->children[i]->contents, "{", 1) == 0)
+            continue;
+        if(strncmp(ast->children[i]->contents, "}", 1) == 0)
+            continue;
+        if(strncmp(ast->children[i]->tag, "regex", 5) == 0)
+            continue;
+
+        val = lval_add(val, lval_read(ast->children[i]));
+    }
+
+    return val;
+}
 
 int main(int argc, char *argv[])
 {
