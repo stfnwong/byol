@@ -17,6 +17,7 @@ typedef enum
     LVAL_ERR,
     LVAL_NUM,
     LVAL_DECIMAL,
+    LVAL_FUN,
     LVAL_SYM,
     LVAL_SEXPR,
     LVAL_QEXPR
@@ -31,21 +32,25 @@ typedef enum
     LERR_BAD_NUM
 } lval_err_type;
 
-// Lisp value 
 
+// Lisp value 
 typedef struct lval lval;
+
+// Lisp builtin
+typedef lval* (*lbuiltin)(lenv*, lval*);
 
 struct lval
 {
-    int    type;
-    long   num;
-    double decimal;
+    int      type;
+    long     num;
+    double   decimal;
     // error and symbol types have some string data
-    char*  err;
-    char*  sym;
+    char*    err;
+    char*    sym;
+    lbuiltin func;
     // pointer to a list of lval 
-    int    count;
-    lval** cell;
+    int      count;
+    lval**   cell;
 };
 
 

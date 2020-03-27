@@ -17,7 +17,7 @@
 #include "lval.h"
 
 
-// TODO : min(), max()
+const char* LISPY_VERSION = "0.0.0.2";
 
 // Convert MPC expressions to lvals
 lval* lval_read_num(mpc_ast_t* ast);
@@ -99,7 +99,7 @@ lval* lval_read(mpc_ast_t* ast)
 int main(int argc, char *argv[])
 {
     //Print version information
-    fprintf(stdout, "Lispy Version 0.0.0.0.1\n");
+    fprintf(stdout, "Lispy Version %s\n", LISPY_VERSION);
     fprintf(stdout, "Press Ctrl+C to exit\n");
 
     // Parsers for individual components
@@ -116,10 +116,7 @@ int main(int argc, char *argv[])
       "                                                       \
         number   : /-?[0-9]+/  ;                              \
         decimal  : /-?([0-9]*[.])?[0-9]+/  ;                  \
-        symbol   : '+' | '-' | '*' | '/' | '^' | '%' |        \
-                  \"min\" | \"max\" | \"join\" | \"head\" |   \
-                  \"tail\" | \"eval\" | \"list\" | \"cons\" | \
-                  \"len\"                                  ;  \
+        symbol   : /[a-zA-Z0-9_+\\-*\\/\\\\=<>!&]+/;          \
         sexpr    : '(' <expr>* ')';                           \
         qexpr    : '{' <expr>* '}';                           \
         expr     : <number> | <symbol> | <sexpr> | <qexpr> ;  \
