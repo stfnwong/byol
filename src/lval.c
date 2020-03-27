@@ -284,30 +284,20 @@ lval* lval_builtin_op(lval* val, char* op)
     return x;
 }
 
-// TODO : add assert macro later
-
 /*
  * lval_builtin_head()
  */
 lval* lval_builtin_head(lval* val)
 {
-    if(val->count != 1)
-    {
-        lval_del(val);
-        return lval_err("[head] passed too many arguments");
-    }
-
-    if(val->cell[0]->type != LVAL_QEXPR)
-    {
-        lval_del(val);
-        return lval_err("[head] passed incorrect type (must be qexpr)");
-    }
-
-    if(val->cell[0]->count == 0)
-    {
-        lval_del(val);
-        return lval_err("[head] passed {}");
-    }
+    LVAL_ASSERT(val, val->count == 1, 
+        "[head] too many arguments"
+    );
+    LVAL_ASSERT(val, val->cell[0]->type == LVAL_QEXPR,
+        "[head] incorrect type (must be qexpr)"
+    );
+    LVAL_ASSERT(val, val->cell[0]->count != 0,
+        "[head] got {}"
+    );
 
     // now take first argument
     lval* v = lval_take(val, 0);
@@ -325,23 +315,15 @@ lval* lval_builtin_head(lval* val)
  */
 lval* lval_builtin_tail(lval* val)
 {
-    if(val->count != 1)
-    {
-        lval_del(val);
-        return lval_err("[tail] passed too many arguments");
-    }
-
-    if(val->cell[0]->type != LVAL_QEXPR)
-    {
-        lval_del(val);
-        return lval_err("[tail] passed incorrect type (must be qexpr)");
-    }
-
-    if(val->cell[0]->count == 0)
-    {
-        lval_del(val);
-        return lval_err("[tail] passed {}");
-    }
+    LVAL_ASSERT(val, val->count == 1, 
+        "[tail] too many arguments"
+    );
+    LVAL_ASSERT(val, val->cell[0]->type == LVAL_QEXPR,
+        "[tail] incorrect type (must be qexpr)"
+    );
+    LVAL_ASSERT(val, val->cell[0]->count != 0,
+        "[tail] got {}"
+    );
 
     lval* v = lval_take(val, 0);
     // delete first element and return 
@@ -364,16 +346,12 @@ lval* lval_builtin_list(lval* val)
  */
 lval* lval_builtin_eval(lval* val)
 {
-    if(val->count != 1)
-    {
-        lval_del(val);
-        return lval_err("[list] passed too many arguments");
-    }
-    if(val->cell[0]->type != LVAL_QEXPR)
-    {
-        lval_del(val);
-        return lval_err("[list] passed incorrect type (must be qexpr)");
-    }
+    LVAL_ASSERT(val, val->count == 1, 
+        "[eval] too many arguments"
+    );
+    LVAL_ASSERT(val, val->cell[0]->type == LVAL_QEXPR,
+        "[eval] incorrect type (must be qexpr)"
+    );
 
     lval* x = lval_take(val, 0);
     x->type = LVAL_SEXPR;
@@ -401,7 +379,9 @@ lval* lval_builtin_join(lval* val)
     for(int i = 0; i < val->count; ++i)
     {
         if(val->cell[0]->type != LVAL_QEXPR)
-            return lval_err("[join] passed incorrect type (must be qexpr)");
+            LVAL_ASSERT(val, val->cell[i]->type == LVAL_QEXPR,
+                    "[join] incorrect type"
+            );
     }
 
     lval* v = lval_pop(val, 0);

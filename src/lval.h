@@ -8,6 +8,9 @@
 
 #include "mpc.h"
 
+#define LVAL_ASSERT(args, cond, err) \
+    if (!(cond)) { lval_del(args); return lval_err(err); }
+
 // list of valid lval types
 typedef enum 
 {
