@@ -144,8 +144,6 @@ void lval_del(lval* val)
     free(val);
 }
 
-
-
 /*
  * lval_print()
  */
@@ -180,8 +178,6 @@ void lval_println(lval* v)
     lval_print(v);
     fprintf(stdout, "\n");
 }
-
-
 
 /*
  * lval_read_num()
@@ -252,6 +248,153 @@ lval* lval_add(lval* v, lval* x)
     return v;
 }
 
+/*
+ * lval_pop()
+ */
+lval* lval_pop(lval* val, int idx)
+{
+    if(idx < 0 || idx > val->count)
+        return NULL;
+
+    // get the idx'th item
+    lval* x = val->cell[idx];
+
+    // shift memory after the item at idx 
+    memmove(
+            &val->cell[idx], 
+            &val->cell[idx+1],
+            sizeof(lval*) * (val->count - idx - 1)
+    );
+    val->count--;
+
+    // realloc the used memory 
+    val->cell = realloc(val->cell, sizeof(lval*) * val->count);
+
+    return x;
+}
+
+/*
+ * lval_take()
+ */
+lval* lval_take(lval* val, int idx)
+{
+    lval* x = lval_pop(val, idx);
+    lval_del(val);
+
+    return x;
+}
+
+/*
+ * lval_builtin_op()
+ */
+lval* lval_builtin_op(lval* val, char* op)
+{
+    // enusre that all args are numbers 
+    for(int i = 0; i < val->count; ++i)
+    {
+        if(val->cell[i]->type != LVAL_NUM)
+        {
+            lval_del(val);
+            return lval_err("Cannot operate on non-number");
+        }
+    }
+
+    // Pop the first element
+    lval* x = lval_pop(val, 0);
+    // If no arguments and we have '-' operator then perform
+    // unary negation
+    if((strncmp(op, "-", 1) == 0) && val->count == 0)
+        x->num = -x->num;
+
+    // for all the remaining elements 
+    while(val->count > 0)
+    {
+        lval* y = lval_pop(val, 0);
+
+        if(strncmp(op, "+", 1) == 0)
+            x->num = x->num + y->num;
+        if(strncmp(op, "-", 1) == 0)
+            x->num = x->num - y->num;
+        if(strncmp(op, "*", 1) == 0)
+            x->num = x->num * y->num;
+        if(strncmp(op, "/", 1) == 0)
+        {
+            if(y->num == 0)
+            {
+                lval_del(x);
+                lval_del(y);
+                x = lval_err("Division by zero");
+                break;
+            }
+            x->num = x->num / y->num;
+        }
+
+        // Modulo division
+        if(strncmp(op, "%", 1) == 0)
+            x->num = x->num % y->num;
+        // Power
+        if(strncmp(op, "^", 1) == 0)
+            x->num = pow(x->num, y->num);
+
+        lval_del(y);
+    }
+    lval_del(val);
+
+    return x;
+}
+
+/*
+ * lval_eval_sexpr()
+ */
+lval* lval_eval_sexpr(lval* val)
+{
+    // eval children of this lval
+    for(int i = 0; i < val->count; ++i)
+        val->cell[i] = lval_eval(val->cell[i]);
+
+    // Check errors
+    for(int i = 0; i < val->count; ++i)
+    {
+        if(val->cell[i]->type == LVAL_ERR)
+            return lval_take(val, i);
+    }
+
+    // we have an empty expression
+    if(val->count == 0)
+        return val;
+
+    // single expression
+    if(val->count == 1)
+        return lval_take(val, 0);
+
+    // ensure first element is a symbol
+    lval* f = lval_pop(val, 0);
+    if(f->type != LVAL_SYM)
+    {
+        lval_del(f);
+        lval_del(val);
+        return lval_err("S-Expression does not start with symbol");
+    }
+
+    // call builtin with operator
+    lval* result = lval_builtin_op(val, f->sym);
+    lval_del(f);
+    
+    return result;
+}
+
+/*
+ * lval_eval()
+ */
+lval* lval_eval(lval* val)
+{
+    if(val->type == LVAL_SEXPR)
+        return lval_eval_sexpr(val);
+
+    // TODO : eval?
+
+    return val;
+}
 
 /*
  * lval_sexpr_print()

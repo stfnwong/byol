@@ -27,7 +27,10 @@ typedef enum
 } lval_err_type;
 
 // Lisp value 
-typedef struct 
+
+typedef struct lval lval;
+
+struct lval
 {
     int    type;
     long   num;
@@ -36,8 +39,8 @@ typedef struct
     char*  sym;
     // pointer to a list of lval 
     int    count;
-    struct lval** cell;
-} lval;
+    lval** cell;
+};
 
 
 // TODO : factor out common stuff into something like __lval_builder()
@@ -57,6 +60,31 @@ void  lval_println(lval* v);
 lval* lval_read_num(mpc_ast_t* ast);
 lval* lval_read(mpc_ast_t* ast);
 lval* lval_add(lval* v, lval* x);
+
+/*
+ * lval_pop()
+ * Pop from the list the item at idx
+ */
+lval* lval_pop(lval* val, int idx);
+/*
+ * lval_take()
+ * Remove an item from a list, deleting all other items
+ */
+lval* lval_take(lval* val, int idx);
+
+/*
+ * lval_builtin_op()
+ * Evaluate a builtin operator
+ */
+lval* lval_builtin_op(lval* val, char* op);
+/*
+ * lval_eval_sexpr()
+ */
+lval* lval_eval_sexpr(lval* val);
+/*
+ * lval_eval()
+ */
+lval* lval_eval(lval* val);
 
 void  lval_sexpr_print(lval* v, char open, char close);
 
