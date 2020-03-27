@@ -13,6 +13,7 @@ typedef enum
 {
     LVAL_ERR,
     LVAL_NUM,
+    LVAL_DECIMAL,
     LVAL_SYM,
     LVAL_SEXPR
 } lval_type;
@@ -34,6 +35,7 @@ struct lval
 {
     int    type;
     long   num;
+    double decimal;
     // error and symbol types have some string data
     char*  err;
     char*  sym;
@@ -45,12 +47,17 @@ struct lval
 
 // lval constructors
 lval* lval_num(long x);
+lval* lval_decimal(double x);
 lval* lval_err(char* m);
 lval* lval_sym(char* s);
 lval* lval_sexpr(void);
-
+/*
+ * lval_del()
+ * Cleanup memory allocated to an LVAL
+ */
 void  lval_del(lval* val);
 
+// Display
 void  lval_print(lval* v);
 void  lval_println(lval* v);
 
@@ -59,7 +66,6 @@ void  lval_println(lval* v);
  * Append an lval to another lval
  */
 lval* lval_add(lval* v, lval* x);
-
 /*
  * lval_pop()
  * Pop from the list the item at idx

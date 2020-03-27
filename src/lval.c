@@ -12,7 +12,7 @@
  * __lval_create()
  * Private lval constructor
  */
-lval* __lval_create(long num, char* m, char* s, int type)
+lval* __lval_create(long num, double decimal, char* m, char* s, int type)
 {
     lval* val;
 
@@ -24,8 +24,9 @@ lval* __lval_create(long num, char* m, char* s, int type)
         );
         return NULL;
     }
-    val->type  = type;
-    val->num   = num;
+    val->type    = type;
+    val->num     = num;
+    val->decimal = decimal;
     if(m != NULL)
     {
         val->err = malloc(strlen(m) + 1);
@@ -54,7 +55,15 @@ lval* __lval_create(long num, char* m, char* s, int type)
  */
 lval* lval_num(long x)
 {
-    return __lval_create(x, NULL, NULL, LVAL_NUM);
+    return __lval_create(x, 0.0f, NULL, NULL, LVAL_NUM);
+}
+
+/*
+ * lval_decimal()
+ */
+lval* lval_decimal(double x)
+{
+    return __lval_create(0, x, NULL, NULL, LVAL_DECIMAL);
 }
 
 /*
@@ -63,7 +72,7 @@ lval* lval_num(long x)
  */
 lval* lval_err(char* m)
 {
-    return __lval_create(0, m, NULL, LVAL_ERR);
+    return __lval_create(0, 0.0f, m, NULL, LVAL_ERR);
 }
 
 /*
@@ -71,7 +80,7 @@ lval* lval_err(char* m)
  */
 lval* lval_sym(char* s)
 {
-    return __lval_create(0, NULL, s, LVAL_SYM);
+    return __lval_create(0, 0.0f, NULL, s, LVAL_SYM);
 }
 
 /*
@@ -79,7 +88,7 @@ lval* lval_sym(char* s)
  */
 lval* lval_sexpr(void)
 {
-    return __lval_create(0, NULL, NULL, LVAL_SEXPR);
+    return __lval_create(0, 0.0f, NULL, NULL, LVAL_SEXPR);
 }
 
 
@@ -304,8 +313,6 @@ lval* lval_eval(lval* val)
 {
     if(val->type == LVAL_SEXPR)
         return lval_eval_sexpr(val);
-
-    // TODO : eval?
 
     return val;
 }

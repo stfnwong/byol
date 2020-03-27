@@ -28,12 +28,30 @@ lval* lval_read(mpc_ast_t* ast);
  */
 lval* lval_read_num(mpc_ast_t* ast)
 {
+    long x;
+
     errno = 0;
-    long x = strtol(ast->contents, NULL, 10);
+    x = strtol(ast->contents, NULL, 10);
     if(errno == ERANGE)
         return lval_err("Invalid number");
     else
         return lval_num(x);
+}
+
+/*
+ * lval_read_decimal()
+ */
+lval* lval_read_decimal(mpc_ast_t* ast)
+{
+    char* end;
+    double dec; 
+
+    errno = 0;
+    dec = strtod(ast->contents, &end);
+    if(errno == ERANGE)
+        return lval_err("Invalid number");
+    else
+        return lval_decimal(dec);
 }
 
 /*
@@ -44,6 +62,8 @@ lval* lval_read(mpc_ast_t* ast)
     // If input is a symbol or a number then return a conversion to that type
     if(strstr(ast->tag, "number"))
         return lval_read_num(ast);
+    if(strstr(ast->tag, "decimal"))
+        return lval_read_decimal(ast);
     if(strstr(ast->tag, "symbol"))
         return lval_sym(ast->contents);
 
@@ -81,27 +101,25 @@ int main(int argc, char *argv[])
     fprintf(stdout, "Lispy Version 0.0.0.0.1\n");
     fprintf(stdout, "Press Ctrl+C to exit\n");
 
-    // I suppose that the polish notation grammar goes here for now... since the Lispy symbol needs
-    // to be visible in this translation unit
-
-    // Polish notation parsers
-
-    mpc_parser_t* Number = mpc_new("number");
-    mpc_parser_t* Symbol = mpc_new("symbol");
-    mpc_parser_t* Sexpr  = mpc_new("sexpr");
-    mpc_parser_t* Expr   = mpc_new("expr");
-    mpc_parser_t* Lispy  = mpc_new("lispy");
+    // Parsers for individual components
+    mpc_parser_t* Number  = mpc_new("number");
+    mpc_parser_t* Decimal = mpc_new("decimal");
+    mpc_parser_t* Symbol  = mpc_new("symbol");
+    mpc_parser_t* Sexpr   = mpc_new("sexpr");
+    mpc_parser_t* Expr    = mpc_new("expr");
+    mpc_parser_t* Lispy   = mpc_new("lispy");
 
     /* Define them with the following Language */
     mpca_lang(MPCA_LANG_DEFAULT,
       "                                               \
-        number   : /-?[0-9]+/ ;                       \
+        number   : /-?[0-9]+/  ;                      \
+        decimal  : /-?([0-9]*[.])?[0-9]+/  ;             \
         symbol   : '+' | '-' | '*' | '/' | '^' | '%'; \
         sexpr    : '(' <expr>* ')';                   \
         expr     : <number> | <symbol> | <sexpr> ;    \
         lispy    : /^/ <expr>* /$/ ;       \
       ",
-      Number, Symbol, Sexpr, Expr, Lispy
+      Number, Decimal, Symbol, Sexpr, Expr, Lispy
     );
 
 
@@ -132,7 +150,7 @@ int main(int argc, char *argv[])
     }
 
     // cleanup parsers 
-    mpc_cleanup(5, Number, Symbol, Expr, Sexpr, Lispy);
+    mpc_cleanup(6, Number, Decimal, Symbol, Expr, Sexpr, Lispy);
 
     return 0;
 }
