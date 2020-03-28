@@ -100,7 +100,7 @@ int main(int argc, char *argv[])
 {
     //Print version information
     fprintf(stdout, "Lispy Version %s\n", LISPY_VERSION);
-    fprintf(stdout, "Press Ctrl+C to exit\n");
+    fprintf(stdout, "Press Ctrl+C to exit\n");      // TODO : have a quit() function
 
     // Parsers for individual components
     mpc_parser_t* Number  = mpc_new("number");
@@ -125,21 +125,27 @@ int main(int argc, char *argv[])
       Number, Decimal, Symbol, Sexpr, Qexpr, Expr, Lispy
     );
 
+    // get a new lisp environment
+    lenv* env = lenv_new();
+    lenv_init_builtins(env);
+
     // main loop
     while(1)
     {
         char* input = readline("lispy> ");
         add_history(input);
 
+
         // attempt to parse the input 
         mpc_result_t r;
         if(mpc_parse("<stdin>", input, Lispy, &r))
         {
             // debug print the expressions
-            lval* x = lval_read(r.output);
-            x = lval_eval(x);
+            lval* x = lval_eval(env, lval_read(r.output));
             lval_println(x);
             lval_del(x);
+
+            mpc_ast_delete(r.output);
         }
         else
         {
@@ -148,6 +154,8 @@ int main(int argc, char *argv[])
         }
         free(input);
     }
+
+    lenv_del(env);
 
     // cleanup parsers 
     mpc_cleanup(6, Number, Decimal, Symbol, Sexpr, Qexpr, Expr, Lispy);

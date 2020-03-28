@@ -17,7 +17,7 @@ typedef enum
     LVAL_ERR,
     LVAL_NUM,
     LVAL_DECIMAL,
-    LVAL_FUN,
+    LVAL_FUNC,
     LVAL_SYM,
     LVAL_SEXPR,
     LVAL_QEXPR
@@ -32,13 +32,16 @@ typedef enum
     LERR_BAD_NUM
 } lval_err_type;
 
-
-// Lisp value 
+// Forward declarations of values, environments
 typedef struct lval lval;
+typedef struct lenv lenv;
 
-// Lisp builtin
+// Lisp builtin function
 typedef lval* (*lbuiltin)(lenv*, lval*);
 
+/*
+ * VALUE
+ */
 struct lval
 {
     int      type;
@@ -53,7 +56,6 @@ struct lval
     lval**   cell;
 };
 
-
 // lval constructors
 lval* lval_num(long x);
 lval* lval_decimal(double x);
@@ -61,16 +63,23 @@ lval* lval_err(char* m);
 lval* lval_sym(char* s);
 lval* lval_sexpr(void);
 lval* lval_qexpr(void);
+lval* lval_func(lbuiltin func);
 
 /*
  * lval_del()
  * Cleanup memory allocated to an LVAL
  */
 void  lval_del(lval* val);
+lval* lval_copy(lval* val);
 
 // Display
 void  lval_print(lval* v);
 void  lval_println(lval* v);
+
+// NOTE: We only need a lenv pointer as the first 
+// argument in order to match the lbuiltin type 
+// signature. In practice we don't actually do 
+// anything with the pointer that we pass.
 
 /*
  * lval_add()
@@ -87,7 +96,6 @@ lval* lval_pop(lval* val, int idx);
  * Remove an item from a list, deleting all other items
  */
 lval* lval_take(lval* val, int idx);
-
 /*
  * lval_builtin_op()
  * Evaluate a builtin operator
@@ -109,10 +117,6 @@ lval* lval_builtin_tail(lval* val);
  */
 lval* lval_builtin_list(lval* val);
 /*
- * lval_builtin_eval()
- */
-lval* lval_builtin_eval(lval* val);
-/*
  * lval_builtin_join()
  * Take a QExpr and return its last element as a QExpr
  */
@@ -122,29 +126,88 @@ lval* lval_builtin_join(lval* val);
  * Takes a value and a QExpr and appends the value to the front
  */
 lval* lval_builtin_cons(lval* val);
-
 /*
  * lval_join()  
  * Inner function for join
  */
 lval* lval_join(lval* a, lval* b);
-
-/*
- * lval_builtin()
- * Dispatch on the various builtins
- */
-lval* lval_builtin(lval* val, char* op);
-
-
 /*
  * lval_eval_sexpr()
  */
-lval* lval_eval_sexpr(lval* val);
+lval* lval_eval_sexpr(lenv* env, lval* val);
 /*
  * lval_eval()
  */
-lval* lval_eval(lval* val);
+lval* lval_eval(lenv* env, lval* val);
+/*
+ * lval_builtin_eval()
+ */
+lval* lval_builtin_eval(lenv* env, lval* val);
 
+
+
+/*
+ * lval_sexpr_print()
+ */
 void  lval_sexpr_print(lval* v, char open, char close);
+
+
+/*
+ * ENVIRONMENT
+ * Holds the names and values for all 'variables' in the
+ * current scope.
+ * NOTE: I don't know if scope is quite the right word here
+ */
+struct lenv
+{
+    int count;
+    char** syms;
+    lval** vals;
+};
+
+
+lenv* lenv_new(void);
+void  lenv_del(lenv* env);
+
+/*
+ * ENVIRONMENT BUILTINS
+ */
+lval* builtin_list(lenv* env, lval* val);
+lval* builtin_head(lenv* env, lval* val);
+lval* builtin_tail(lenv* env, lval* val);
+lval* builtin_eval(lenv* env, lval* val);
+lval* builtin_join(lenv* env, lval* val);
+// operations
+lval* builtin_add(lenv* env, lval* val);
+lval* builtin_sub(lenv* env, lval* val);
+lval* builtin_mul(lenv* env, lval* val);
+lval* builtin_div(lenv* env, lval* val);
+lval* builtin_mod(lenv* env, lval* val);
+lval* builtin_pow(lenv* env, lval* val);
+lval* builtin_min(lenv* env, lval* val);
+lval* builtin_max(lenv* env, lval* val);
+
+/*
+ * lenv_get()
+ * Get a variable from the environment. Check all the values 
+ * currently in the environment and see if any match the 
+ * lval given by val.
+ */
+lval* lenv_get(lenv* env, lval* val);
+/*
+ * lenv_put()
+ * Puts a new variable into the environment. If the variable already 
+ * exists then replace its existing value with the new value.
+ */
+void lenv_put(lenv* env, lval* sym, lval* func);
+/*
+ * lenv_add_builtin()
+ */
+void lenv_add_builtin(lenv* env, char* name, lbuiltin func);
+/*
+ * lenv_init_builtins()
+ */
+void lenv_init_builtins(lenv* env);  
+
 
 #endif /*__BYOL_LVAL_H*/
