@@ -158,6 +158,7 @@ lval* lval_copy(lval* val)
         fprintf(stdout, "[%s] failed to allocate %ld bytes for new lval\n", __func__, sizeof(*out));
         return NULL;
     }
+    out->type = val->type;
 
     switch(val->type)
     {
@@ -165,6 +166,7 @@ lval* lval_copy(lval* val)
         case LVAL_FUNC:
             out->func = val->func;
             break;
+
         case LVAL_NUM:
             out->num = val->num;
             break;
@@ -483,7 +485,7 @@ lval* lval_eval_sexpr(lenv* env, lval* val)
     if(val->count == 1)
         return lval_take(val, 0);
 
-    // ensure first element is a function after 
+    // ensure first element is a function after evaluation
     lval* f = lval_pop(val, 0);
     if(f->type != LVAL_FUNC)
     {
@@ -578,50 +580,6 @@ void lenv_del(lenv* env)
     free(env);
 }
 
-// TODO : some quick wins here would be to use a data
-// structure for the varibles that allows faster lookup
-/*
- * lenv_get()
- */
-lval* lenv_get(lenv* env, lval* val)
-{
-    // check if the variable exists
-    for(int i = 0; i < env->count; ++i)
-    {
-        if(strcmp(env->syms[i], val->sym) == 0)
-            return lval_copy(env->vals[i]);
-    }
-
-    return lval_err("Unbound symbol");
-}
-
-/*
- * lenv_put()
-*/
-void lenv_put(lenv* env, lval* sym, lval* func)
-{
-    // check if the variable exists
-    for(int i = 0; i < env->count; ++i)
-    {
-        // if we find 
-        if(strcmp(env->syms[i], sym->sym) == 0)
-        {
-            lval_del(env->vals[i]);
-            env->vals[i] = lval_copy(func);
-            return;
-        }
-    }
-
-    // Add a new variable
-    env->count++;
-    env->vals = realloc(env->vals, sizeof(lval*) * env->count);
-    env->syms = realloc(env->syms, sizeof(char*) * env->count);
-
-    env->vals[env->count - 1] = lval_copy(func);
-    env->syms[env->count - 1] = malloc(strlen(sym->sym) + 1);
-    strcpy(env->syms[env->count - 1], sym->sym);
-}
-
 // ======== ENVIRONMENT BUILTINS ======== //
 // List operators
 lval* builtin_head(lenv* env, lval* val)
@@ -678,6 +636,51 @@ lval* builtin_max(lenv* env, lval* val)
 {
     return lval_builtin_op(val, "max");
 }
+
+// TODO : some quick wins here would be to use a data
+// structure for the varibles that allows faster lookup
+/*
+ * lenv_get()
+ */
+lval* lenv_get(lenv* env, lval* val)
+{
+    // check if the variable exists
+    for(int i = 0; i < env->count; ++i)
+    {
+        if(strcmp(env->syms[i], val->sym) == 0)
+            return lval_copy(env->vals[i]);
+    }
+
+    return lval_err("Unbound symbol");
+}
+
+/*
+ * lenv_put()
+*/
+void lenv_put(lenv* env, lval* sym, lval* func)
+{
+    // check if the variable exists
+    for(int i = 0; i < env->count; ++i)
+    {
+        // if we find 
+        if(strcmp(env->syms[i], sym->sym) == 0)
+        {
+            lval_del(env->vals[i]);
+            env->vals[i] = lval_copy(func);
+            return;
+        }
+    }
+
+    // Add a new variable
+    env->count++;
+    env->vals = realloc(env->vals, sizeof(lval*) * env->count);
+    env->syms = realloc(env->syms, sizeof(char*) * env->count);
+
+    env->vals[env->count - 1] = lval_copy(func);
+    env->syms[env->count - 1] = malloc(strlen(sym->sym) + 1);
+    strcpy(env->syms[env->count - 1], sym->sym);
+}
+
 
 /*
  * lenv_add_builtin()
