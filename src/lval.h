@@ -188,6 +188,13 @@ lval* builtin_min(lenv* env, lval* val);
 lval* builtin_max(lenv* env, lval* val);
 
 /*
+ * builtin_def()
+ * Define a new variable
+ */
+lval* builtin_def(lenv* env, lval* val);
+
+
+/*
  * lenv_get()
  * Get a variable from the environment. Check all the values 
  * currently in the environment and see if any match the 

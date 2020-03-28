@@ -637,7 +637,42 @@ lval* builtin_max(lenv* env, lval* val)
     return lval_builtin_op(val, "max");
 }
 
-// TODO : some quick wins here would be to use a data
+/*
+ * builtin_def()
+ * Define a new variable
+ */
+lval* builtin_def(lenv* env, lval* val)
+{
+    LVAL_ASSERT(val, val->cell[0]->type == LVAL_QEXPR,
+            "Function 'def' passed incorrect type"
+    );
+
+    lval* syms = val->cell[0];     // first arg is symbol list
+    // ensure that all elements in the first list are symbols
+    for(int i = 0; i < syms->count; ++i)
+    {
+        LVAL_ASSERT(val, syms->cell[i]->type == LVAL_SYM,
+                "Function 'def' cannot define non-symbols"
+        );
+    }
+
+    // check correct number of symbols and values 
+    LVAL_ASSERT(val, syms->count == val->count - 1,
+            "Function 'def' number of syms does not match number of vals"
+    );
+
+    // Assign copies of each value mapped to each symbol
+    for(int i = 0; i < syms->count; ++i)
+        lenv_put(env, syms->cell[i], val->cell[i+1]);
+    lval_del(val);
+
+    return lval_sexpr();
+}
+
+
+
+
+// TODO : some quick wins here later might be to use a data
 // structure for the varibles that allows faster lookup
 /*
  * lenv_get()
@@ -705,6 +740,7 @@ void lenv_init_builtins(lenv* env)
     lenv_add_builtin(env, "tail", builtin_tail);
     lenv_add_builtin(env, "eval", builtin_eval);
     lenv_add_builtin(env, "join", builtin_join);
+    lenv_add_builtin(env, "def",  builtin_def);
 
     // operators
     lenv_add_builtin(env, "+",   builtin_add);
