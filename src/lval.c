@@ -71,9 +71,22 @@ lval* lval_decimal(double x)
  * lval_err()
  * Construct an error lval
  */
-lval* lval_err(char* m)
+lval* lval_err(char* fmt, ...)
 {
-    return __lval_create(0, 0.0f, m, NULL, LVAL_ERR);
+    lval* verr = __lval_create(0, 0.0f, NULL, NULL, LVAL_ERR);
+
+    // create a new va_list 
+    va_list va;
+    va_start(va, fmt);
+
+    // limit messages to 512 bytes
+    verr->err = malloc(sizeof(char) * 512);
+    vsnprintf(verr->err, 511, fmt, va);
+    // resize to the real size of the string
+    verr->err = realloc(verr->err, strlen(verr->err) + 1);
+    va_end(va);
+
+    return verr;
 }
 
 /*
@@ -127,10 +140,11 @@ void lval_del(lval* val)
     switch(val->type)
     {
         case LVAL_ERR:
-            free(val->err);
+            free(val->err); // TODO : double free here when div by zero
             break;
         case LVAL_FUNC:
         case LVAL_NUM:
+        case LVAL_DECIMAL:
             break;      // nothing extra to do
         case LVAL_SYM:
             free(val->sym);
@@ -168,6 +182,7 @@ lval* lval_copy(lval* val)
             break;
 
         case LVAL_NUM:
+        case LVAL_DECIMAL:
             out->num = val->num;
             break;
 
@@ -203,6 +218,7 @@ void lval_print(lval* v)
         case LVAL_ERR:
             fprintf(stdout, "ERROR: %s", v->err);
             break;
+        case LVAL_DECIMAL:
         case LVAL_NUM:
             fprintf(stdout, "%li", v->num);
             break;
@@ -229,6 +245,32 @@ void lval_println(lval* v)
 {
     lval_print(v);
     fprintf(stdout, "\n");
+}
+
+/*
+ * lval_type_str()
+ */
+char* lval_type_str(lval_type t)
+{
+    switch(t)
+    {
+        case LVAL_FUNC:
+            return "Function";
+        case LVAL_NUM:
+            return "Number";
+        case LVAL_DECIMAL:
+            return "Decimal";
+        case LVAL_ERR:
+            return "Error";
+        case LVAL_SYM:
+            return "Symol";
+        case LVAL_SEXPR:
+            return "S-Expression";
+        case LVAL_QEXPR:
+            return "Q-Expression";
+        default:
+            return "Unkown type\0";
+    }
 }
 
 /*
@@ -296,8 +338,10 @@ lval* lval_builtin_op(lval* val, char* op)
     {
         if(val->cell[i]->type != LVAL_NUM)
         {
+            lval* err = lval_err("[%s] operator '%s' expected %s, got %s", 
+                    __func__, op, lval_type_str(LVAL_NUM), lval_type_str(val->cell[i]->type));
             lval_del(val);
-            return lval_err("Cannot operate on non-number");
+            return err;
         }
     }
 
@@ -323,10 +367,9 @@ lval* lval_builtin_op(lval* val, char* op)
         {
             if(y->num == 0)
             {
-                lval_del(x);
-                lval_del(y);
                 x = lval_err("Division by zero");
-                break;
+                lval_del(y);
+                goto LVAL_BUILTIN_OP_END;
             }
             x->num = x->num / y->num;
         }
@@ -346,6 +389,8 @@ lval* lval_builtin_op(lval* val, char* op)
 
         lval_del(y);
     }
+
+LVAL_BUILTIN_OP_END:
     lval_del(val);
 
     return x;
@@ -357,10 +402,10 @@ lval* lval_builtin_op(lval* val, char* op)
 lval* lval_builtin_head(lval* val)
 {
     LVAL_ASSERT(val, val->count == 1, 
-        "[head] too many arguments"
+        "[%s] expected %i args, got %i", __func__, 1, val->count
     );
     LVAL_ASSERT(val, val->cell[0]->type == LVAL_QEXPR,
-        "[head] incorrect type (must be qexpr)"
+        "[%s] expected Q-Expression, got %s", __func__, lval_type_str(val->cell[0]->type)
     );
     LVAL_ASSERT(val, val->cell[0]->count != 0,
         "[head] got {}"
@@ -383,10 +428,10 @@ lval* lval_builtin_head(lval* val)
 lval* lval_builtin_tail(lval* val)
 {
     LVAL_ASSERT(val, val->count == 1, 
-        "[tail] too many arguments"
+        "[%s] expected %i args, got %i", __func__, 1, val->count
     );
     LVAL_ASSERT(val, val->cell[0]->type == LVAL_QEXPR,
-        "[tail] incorrect type (must be qexpr)"
+        "[%s] expected Q-Expression, got %s", __func__, lval_type_str(val->cell[0]->type)
     );
     LVAL_ASSERT(val, val->cell[0]->count != 0,
         "[tail] got {}"
@@ -414,10 +459,10 @@ lval* lval_builtin_list(lval* val)
 lval* lval_builtin_eval(lenv* env, lval* val)
 {
     LVAL_ASSERT(val, val->count == 1, 
-        "[eval] too many arguments"
+        "[%s] expected %i args, got %i", __func__, 1, val->count
     );
     LVAL_ASSERT(val, val->cell[0]->type == LVAL_QEXPR,
-        "[eval] incorrect type (must be qexpr)"
+        "[eval] expected type LVAL_QEXPR, got %s", __func__, lval_type_str(val->cell[0]->type)
     );
 
     lval* x = lval_take(val, 0);
@@ -658,7 +703,7 @@ lval* builtin_def(lenv* env, lval* val)
 
     // check correct number of symbols and values 
     LVAL_ASSERT(val, syms->count == val->count - 1,
-            "Function 'def' number of syms does not match number of vals"
+            "Function 'def' number of syms (%ld) does not match number of vals (%ld)", syms->count, val->count - 1
     );
 
     // Assign copies of each value mapped to each symbol
@@ -686,7 +731,7 @@ lval* lenv_get(lenv* env, lval* val)
             return lval_copy(env->vals[i]);
     }
 
-    return lval_err("Unbound symbol");
+    return lval_err("Unbound symbol %s", val->sym);
 }
 
 /*

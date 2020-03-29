@@ -8,8 +8,14 @@
 
 #include "mpc.h"
 
-#define LVAL_ASSERT(args, cond, err) \
-    if (!(cond)) { lval_del(args); return lval_err(err); }
+// note : do I need the ol' do{....} while(0) trick here?
+#define LVAL_ASSERT(args, cond, fmt, ...) \
+    if (!(cond)) {\
+        lval* err = lval_err(fmt, ##__VA_ARGS__); \
+        lval_del(args); \
+        return err; \
+    } \
+
 
 // list of valid lval types
 typedef enum 
@@ -44,22 +50,22 @@ typedef lval* (*lbuiltin)(lenv*, lval*);
  */
 struct lval
 {
-    int      type;
-    long     num;
-    double   decimal;
+    lval_type type;
+    long      num;
+    double    decimal;
     // error and symbol types have some string data
-    char*    err;
-    char*    sym;
-    lbuiltin func;
+    char*     err;
+    char*     sym;
+    lbuiltin  func;
     // pointer to a list of lval 
-    int      count;
-    lval**   cell;
+    int       count;
+    lval**    cell;
 };
 
 // lval constructors
 lval* lval_num(long x);
 lval* lval_decimal(double x);
-lval* lval_err(char* m);
+lval* lval_err(char* fmt, ...);
 lval* lval_sym(char* s);
 lval* lval_sexpr(void);
 lval* lval_qexpr(void);
@@ -75,6 +81,7 @@ lval* lval_copy(lval* val);
 // Display
 void  lval_print(lval* v);
 void  lval_println(lval* v);
+char* lval_type_str(lval_type t);
 
 // NOTE: We only need a lenv pointer as the first 
 // argument in order to match the lbuiltin type 

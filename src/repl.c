@@ -135,7 +135,6 @@ int main(int argc, char *argv[])
         char* input = readline("lispy> ");
         add_history(input);
 
-
         // attempt to parse the input 
         mpc_result_t r;
         if(mpc_parse("<stdin>", input, Lispy, &r))
@@ -144,7 +143,6 @@ int main(int argc, char *argv[])
             lval* x = lval_eval(env, lval_read(r.output));
             lval_println(x);
             lval_del(x);
-
             mpc_ast_delete(r.output);
         }
         else
