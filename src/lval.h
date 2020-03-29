@@ -16,6 +16,24 @@
         return err; \
     } \
 
+// Assert on types 
+#define LVAL_ASSERT_TYPE(func, args, idx, expected) \
+    LVAL_ASSERT(args, args->cell[idx]->type == expected, \
+            "Function '%s': incorrect type for argument %i. Got %s, expected %s.", \
+            func, idx, lval_type_str(args->cell[idx]->type), lval_type_str(expected))
+
+// Assert on numbers 
+#define LVAL_ASSERT_NUM(func, args, expected) \
+    LVAL_ASSERT(args, args->count == expected, \
+            "Function '%s': incorrect number of args. Got %i, expected %i.", \
+            func, args->count, expected)
+
+// Assert non empty 
+#define LVAL_ASSERT_NOT_EMPTY(func, args, idx) \
+    LVAL_ASSERT(args, args->cell[idx]->count != 0, \
+            "Function '%s': passed {} for argument %i.", \
+            func, idx)
+
 
 // list of valid lval types
 typedef enum 

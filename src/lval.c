@@ -401,15 +401,9 @@ LVAL_BUILTIN_OP_END:
  */
 lval* lval_builtin_head(lval* val)
 {
-    LVAL_ASSERT(val, val->count == 1, 
-        "[%s] expected %i args, got %i", __func__, 1, val->count
-    );
-    LVAL_ASSERT(val, val->cell[0]->type == LVAL_QEXPR,
-        "[%s] expected Q-Expression, got %s", __func__, lval_type_str(val->cell[0]->type)
-    );
-    LVAL_ASSERT(val, val->cell[0]->count != 0,
-        "[head] got {}"
-    );
+    LVAL_ASSERT_NUM(__func__, val, 1);
+    LVAL_ASSERT_TYPE(__func__, val, 0, LVAL_QEXPR);
+    LVAL_ASSERT_NOT_EMPTY(__func__, val, 0);
 
     // now take first argument
     lval* v = lval_take(val, 0);
@@ -427,15 +421,9 @@ lval* lval_builtin_head(lval* val)
  */
 lval* lval_builtin_tail(lval* val)
 {
-    LVAL_ASSERT(val, val->count == 1, 
-        "[%s] expected %i args, got %i", __func__, 1, val->count
-    );
-    LVAL_ASSERT(val, val->cell[0]->type == LVAL_QEXPR,
-        "[%s] expected Q-Expression, got %s", __func__, lval_type_str(val->cell[0]->type)
-    );
-    LVAL_ASSERT(val, val->cell[0]->count != 0,
-        "[tail] got {}"
-    );
+    LVAL_ASSERT_NUM(__func__, val, 1);
+    LVAL_ASSERT_TYPE(__func__, val, 0, LVAL_QEXPR);
+    LVAL_ASSERT_NOT_EMPTY(__func__, val, 0);
 
     lval* v = lval_take(val, 0);
     // delete first element and return 
@@ -458,12 +446,8 @@ lval* lval_builtin_list(lval* val)
  */
 lval* lval_builtin_eval(lenv* env, lval* val)
 {
-    LVAL_ASSERT(val, val->count == 1, 
-        "[%s] expected %i args, got %i", __func__, 1, val->count
-    );
-    LVAL_ASSERT(val, val->cell[0]->type == LVAL_QEXPR,
-        "[eval] expected type LVAL_QEXPR, got %s", __func__, lval_type_str(val->cell[0]->type)
-    );
+    LVAL_ASSERT_NUM(__func__, val, 1);
+    LVAL_ASSERT_TYPE(__func__, val, 0, LVAL_QEXPR);
 
     lval* x = lval_take(val, 0);
     x->type = LVAL_SEXPR;
@@ -491,9 +475,7 @@ lval* lval_builtin_join(lval* val)
     for(int i = 0; i < val->count; ++i)
     {
         if(val->cell[0]->type != LVAL_QEXPR)
-            LVAL_ASSERT(val, val->cell[i]->type == LVAL_QEXPR,
-                    "[join] incorrect type"
-            );
+            LVAL_ASSERT_TYPE(__func__, val, 0, LVAL_QEXPR);
     }
 
     lval* v = lval_pop(val, 0);
