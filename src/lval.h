@@ -74,7 +74,7 @@ struct lval
     // error and symbol types have some string data
     char*     err;
     char*     sym;
-    lbuiltin  func;
+    lbuiltin  builtin;
     // pointer to a list of lval 
     int       count;
     lval**    cell;

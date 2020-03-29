@@ -41,7 +41,7 @@ lval* __lval_create(long num, double decimal, char* m, char* s, int type)
     }
     else
         val->sym   = NULL;
-    val->func  = 0;     // what is the 'default' value for builtin?
+    val->builtin  = 0;     // what is the 'default' value for builtin?
 
     val->count = 0;
     val->cell  = NULL;
@@ -125,7 +125,7 @@ lval* lval_func(lbuiltin func)
     val->decimal = 0.0f;
     val->err     = NULL;
     val->sym     = NULL;
-    val->func    = func;
+    val->builtin = func;
     val->count   = 0;
     val->cell    = NULL;
 
@@ -178,7 +178,7 @@ lval* lval_copy(lval* val)
     {
         // numbers and functions can be copied directly
         case LVAL_FUNC:
-            out->func = val->func;
+            out->builtin = val->builtin;
             break;
 
         case LVAL_NUM:
@@ -522,7 +522,7 @@ lval* lval_eval_sexpr(lenv* env, lval* val)
     }
 
     // call builtin with operator
-    lval* result = f->func(env, val);
+    lval* result = f->builtin(env, val);
     lval_del(f);
     
     return result;
