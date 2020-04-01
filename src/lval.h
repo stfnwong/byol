@@ -19,20 +19,20 @@
 // Assert on types 
 #define LVAL_ASSERT_TYPE(func, args, idx, expected) \
     LVAL_ASSERT(args, args->cell[idx]->type == expected, \
-            "Function '%s': incorrect type for argument %i. Got %s, expected %s.", \
-            func, idx, lval_type_str(args->cell[idx]->type), lval_type_str(expected))
+            "[%s] Function '%s': incorrect type for argument %i. Got %s, expected %s.", \
+            __func__, func, idx, lval_type_str(args->cell[idx]->type), lval_type_str(expected))
 
 // Assert on numbers 
 #define LVAL_ASSERT_NUM(func, args, expected) \
     LVAL_ASSERT(args, args->count == expected, \
-            "Function '%s': incorrect number of args. Got %i, expected %i.", \
-            func, args->count, expected)
+            "[%s] Function '%s': incorrect number of args. Got %i, expected %i.", \
+            __func__, func, args->count, expected)
 
 // Assert non empty 
 #define LVAL_ASSERT_NOT_EMPTY(func, args, idx) \
     LVAL_ASSERT(args, args->cell[idx]->count != 0, \
-            "Function '%s': passed {} for argument %i.", \
-            func, idx)
+            "[%s] Function '%s': passed {} for argument %i.", \
+            __func__, func, idx)
 
 
 // list of valid lval types
@@ -74,8 +74,12 @@ struct lval
     // error and symbol types have some string data
     char*     err;
     char*     sym;
+    // Functions
     lbuiltin  builtin;
-    // pointer to a list of lval 
+    lenv*     env;
+    lval*     formals;
+    lval*     body;
+    // Expressions 
     int       count;
     lval**    cell;
 };
@@ -88,6 +92,7 @@ lval* lval_sym(char* s);
 lval* lval_sexpr(void);
 lval* lval_qexpr(void);
 lval* lval_func(lbuiltin func);
+lval* lval_lambda(lval* formals, lval* body);
 
 /*
  * lval_del()
@@ -168,6 +173,10 @@ lval* lval_eval(lenv* env, lval* val);
  * lval_builtin_eval()
  */
 lval* lval_builtin_eval(lenv* env, lval* val);
+/*
+ * lval_call()
+ */
+lval* lval_call(lenv* env, lval* func, lval* val);
 
 
 
@@ -188,36 +197,13 @@ struct lenv
     int count;
     char** syms;
     lval** vals;
+    lenv*  parent;
 };
 
 
 lenv* lenv_new(void);
 void  lenv_del(lenv* env);
-
-/*
- * ENVIRONMENT BUILTINS
- */
-lval* builtin_list(lenv* env, lval* val);
-lval* builtin_head(lenv* env, lval* val);
-lval* builtin_tail(lenv* env, lval* val);
-lval* builtin_eval(lenv* env, lval* val);
-lval* builtin_join(lenv* env, lval* val);
-// operations
-lval* builtin_add(lenv* env, lval* val);
-lval* builtin_sub(lenv* env, lval* val);
-lval* builtin_mul(lenv* env, lval* val);
-lval* builtin_div(lenv* env, lval* val);
-lval* builtin_mod(lenv* env, lval* val);
-lval* builtin_pow(lenv* env, lval* val);
-lval* builtin_min(lenv* env, lval* val);
-lval* builtin_max(lenv* env, lval* val);
-
-/*
- * builtin_def()
- * Define a new variable
- */
-lval* builtin_def(lenv* env, lval* val);
-
+lenv* lenv_copy(lenv* env);
 
 /*
  * lenv_get()
@@ -232,6 +218,36 @@ lval* lenv_get(lenv* env, lval* val);
  * exists then replace its existing value with the new value.
  */
 void lenv_put(lenv* env, lval* sym, lval* func);
+/*
+ * lenv_def()
+ * Perform def in the top-most parent of the env
+ */
+void lenv_def(lenv* env, lval* sym, lval* func);
+
+/*
+ * ENVIRONMENT BUILTINS
+ */
+lval* builtin_var(lenv* env, lval* val, char* func);
+lval* builtin_list(lenv* env, lval* val);
+lval* builtin_head(lenv* env, lval* val);
+lval* builtin_tail(lenv* env, lval* val);
+lval* builtin_eval(lenv* env, lval* val);
+lval* builtin_join(lenv* env, lval* val);
+lval* builtin_lambda(lenv* env, lval* val);
+lval* builtin_def(lenv* env, lval* val);
+lval* builtin_put(lenv* env, lval* val);
+
+// operations
+lval* builtin_add(lenv* env, lval* val);
+lval* builtin_sub(lenv* env, lval* val);
+lval* builtin_mul(lenv* env, lval* val);
+lval* builtin_div(lenv* env, lval* val);
+lval* builtin_mod(lenv* env, lval* val);
+lval* builtin_pow(lenv* env, lval* val);
+lval* builtin_min(lenv* env, lval* val);
+lval* builtin_max(lenv* env, lval* val);
+
+
 /*
  * lenv_add_builtin()
  */
