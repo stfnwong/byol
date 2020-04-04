@@ -153,6 +153,8 @@ int main(int argc, char *argv[])
         free(input);
     }
 
+    // Since we quit with sigterm, we are actually letting the OS 
+    // clean up after us. 
     lenv_del(env);
 
     // cleanup parsers 

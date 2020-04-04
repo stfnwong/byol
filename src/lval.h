@@ -247,7 +247,6 @@ lval* builtin_pow(lenv* env, lval* val);
 lval* builtin_min(lenv* env, lval* val);
 lval* builtin_max(lenv* env, lval* val);
 
-
 /*
  * lenv_add_builtin()
  */

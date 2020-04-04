@@ -19,7 +19,7 @@ lval* __lval_create(long num, double decimal, char* m, char* s, int type)
     val = malloc(sizeof(*val));
     if(!val)
     {
-        fprintf(stdout, "[%s] failed to allocate %ld bytes for lval\n", 
+        fprintf(stderr, "[%s] failed to allocate %ld bytes for lval\n", 
                 __func__, sizeof(*val)
         );
         return NULL;
@@ -183,10 +183,10 @@ void lval_del(lval* val)
  */
 lval* lval_copy(lval* val)
 {
-    lval* out = malloc(sizeof(*out));
+    lval* out = malloc(sizeof(*out));  
     if(!out)
     {
-        fprintf(stdout, "[%s] failed to allocate %ld bytes for new lval\n", __func__, sizeof(*out));
+        fprintf(stderr, "[%s] failed to allocate %ld bytes for new lval\n", __func__, sizeof(*out));
         return NULL;
     }
     out->type = val->type;
@@ -195,7 +195,7 @@ lval* lval_copy(lval* val)
     {
         // numbers and functions can be copied directly
         case LVAL_FUNC:
-            if(val->builtin)
+            if(val->builtin != NULL)        // TODO : segfault from here
                 out->builtin = val->builtin;
             else
             {
@@ -297,7 +297,7 @@ char* lval_type_str(lval_type t)
         case LVAL_ERR:
             return "Error";
         case LVAL_SYM:
-            return "Symol";
+            return "Symbol";
         case LVAL_SEXPR:
             return "S-Expression";
         case LVAL_QEXPR:
@@ -316,7 +316,7 @@ lval* lval_add(lval* v, lval* x)
     v->cell = realloc(v->cell, sizeof(*v) * v->count);
     if(!v->cell)
     {
-        fprintf(stdout, "[%s] failed to realloc memory for cell\n", __func__);
+        fprintf(stderr, "[%s] failed to realloc memory for cell\n", __func__);
         return NULL;
     }
     v->cell[v->count-1] = x;
@@ -533,13 +533,14 @@ lval* lval_eval_sexpr(lenv* env, lval* val)
     lval* f = lval_pop(val, 0);
     if(f->type != LVAL_FUNC)
     {
-        lval_del(f);
-        lval_del(val);
-        return lval_err("[%s] First element is not a function. Got %s, expected %s",
+        lval* err =  lval_err("[%s] First element is not a function. Got %s, expected %s",
                 __func__,
                 lval_type_str(f->type),
                 lval_type_str(LVAL_FUNC)
         );
+        lval_del(f);
+        lval_del(val);
+        return err;
     }
 
     // call builtin with operator
@@ -611,7 +612,7 @@ lval* lval_call(lenv* env, lval* func, lval* val)
 
         // Get symbol and argument, and bind to enviroment
         lval* sym = lval_pop(func->formals, 0);
-        lval* val = lval_pop(val, 0);       // TODO : memory issue is here...
+        lval* val = lval_pop(val, 0); // TODO : memory issue is here...
         lenv_put(env, sym, val);
         lval_del(sym);
         lval_del(val);
@@ -698,16 +699,16 @@ lenv* lenv_copy(lenv* env)
     lenv* e = malloc(sizeof(*e));
     if(!e)
     {
-        fprintf(stdout, "[%s] failed to allocate %ld bytes for new lenv\n",
+        fprintf(stderr, "[%s] failed to allocate %ld bytes for new lenv\n",
                 __func__, sizeof(*e)
         );
         return NULL;
     }
 
     e->parent = env->parent;
-    e->count = env->count;
-    e->syms = malloc(sizeof(char*) * env->count);
-    e->vals = malloc(sizeof(lval*) * env->count);
+    e->count  = env->count;
+    e->syms   = malloc(sizeof(char*) * env->count);
+    e->vals   = malloc(sizeof(lval*) * env->count);
 
     for(int i = 0; i < env->count; ++i)
     {
