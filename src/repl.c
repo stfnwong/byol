@@ -7,21 +7,59 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>         // for getopt
 // editline
 #include <editline/readline.h>
 //#include <editline/history.h>
 // MPC library 
-#include "mpc.h"
-
-// Lisp value definitions
-#include "lval.h"
+#include "repl.h"
 
 
-const char* LISPY_VERSION = "0.0.0.2";
+// =============== REPL OPTS 
+/*
+ * create_repl_opts()
+ */
+ReplOpts* repl_opts_create(void)
+{
+    ReplOpts* opts;
 
-// Convert MPC expressions to lvals
-lval* lval_read_num(mpc_ast_t* ast);
-lval* lval_read(mpc_ast_t* ast);
+
+    opts = malloc(sizeof(*opts));
+    if(!opts)
+    {
+        fprintf(stderr, "[%s] failed to alloc %ld bytes for repl options\n", __func__, sizeof(*opts));
+        return NULL;
+    }
+
+    // set defaulfs
+    opts->filename = NULL;
+
+    return opts;
+}
+
+
+/*
+ * destroy_repl_opts()
+ */
+void repl_opts_destroy(ReplOpts* opts)
+{
+    free(opts->filename);
+    free(opts);
+}
+
+/*
+ * repl_opts_add_filename()
+ */
+void repl_opts_add_filename(ReplOpts* opts, char* filename)
+{
+    if(opts->filename != NULL)
+        opts->filename = realloc(opts->filename, sizeof(char) * strlen(filename) + 1);
+    else
+        opts->filename = malloc(sizeof(char) * strlen(filename) + 1);
+
+    strcpy(opts->filename, filename);
+}
+
 
 /*
  * lval_read_num()
@@ -98,9 +136,24 @@ lval* lval_read(mpc_ast_t* ast)
 
 int main(int argc, char *argv[])
 {
-    //Print version information
-    fprintf(stdout, "Lispy Version %s\n", LISPY_VERSION);
-    fprintf(stdout, "Press Ctrl+C to exit\n");      // TODO : have a quit() function
+    // Deal with args
+    int opt;
+    extern int optind;  // for checking filename
+
+    ReplOpts* repl_opts = repl_opts_create();
+
+    do
+    {
+        opt = getopt(argc, argv, "");
+
+    } while(opt != -1);
+
+    if(optind < argc)
+    {
+        char* filename = argv[optind];
+        // Move to options 
+        repl_opts_add_filename(repl_opts, filename);
+    }
 
     // Parsers for individual components
     mpc_parser_t* Number  = mpc_new("number");
@@ -129,33 +182,79 @@ int main(int argc, char *argv[])
     lenv* env = lenv_new();
     lenv_init_builtins(env);
 
-    // main loop
-    while(1)
+    if(repl_opts->filename != NULL)
     {
-        char* input = readline("lispy> ");
-        add_history(input);
+        // Non interactive mode 
+        fprintf(stdout, "[%s] non-interactive mode goes here\n", __func__);
+        FILE* fp;
+        size_t len = 0;
+        char*  line = NULL;
 
-        // attempt to parse the input 
-        mpc_result_t r;
-        if(mpc_parse("<stdin>", input, Lispy, &r))
+        fp = fopen(repl_opts->filename, "r");
+        if(!fp)
         {
-            // debug print the expressions
-            lval* x = lval_eval(env, lval_read(r.output));
-            lval_println(x);
-            lval_del(x);
-            mpc_ast_delete(r.output);
+            fprintf(stderr, "[%s] failed to open file [%s]\n",
+                    __func__, repl_opts->filename);
+            goto CLEANUP;
         }
-        else
+
+        while(1)
         {
-            mpc_err_print(r.error);
-            mpc_err_delete(r.error);
+            ssize_t read = getline(&line, &len, fp);
+            if(read == -1)
+                break;
+
+            //fprintf(stdout, "[%s] %s(%ld chars)\n",
+            //        __func__, line, len);
+            
+            mpc_result_t r;
+            if(mpc_parse("<stdin>", line, Lispy, &r))
+            {
+                // debug print the expressions
+                lval* x = lval_eval(env, lval_read(r.output));
+                lval_println(x);
+                lval_del(x);
+                mpc_ast_delete(r.output);
+            }
+            else
+            {
+                mpc_err_print(r.error);
+                mpc_err_delete(r.error);
+            }
         }
-        free(input);
+    }
+    else
+    {
+        // main loop
+        while(1)
+        {
+            char* input = readline("lispy> ");
+            add_history(input);
+
+            // attempt to parse the input 
+            mpc_result_t r;
+            if(mpc_parse("<stdin>", input, Lispy, &r))
+            {
+                // debug print the expressions
+                lval* x = lval_eval(env, lval_read(r.output));
+                lval_println(x);
+                lval_del(x);
+                mpc_ast_delete(r.output);
+            }
+            else
+            {
+                mpc_err_print(r.error);
+                mpc_err_delete(r.error);
+            }
+            free(input);
+        }
     }
 
+CLEANUP:
     // Since we quit with sigterm, we are actually letting the OS 
     // clean up after us. 
     lenv_del(env);
+    repl_opts_destroy(repl_opts);
 
     // cleanup parsers 
     mpc_cleanup(6, Number, Decimal, Symbol, Sexpr, Qexpr, Expr, Lispy);
