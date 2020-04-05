@@ -3,6 +3,8 @@
  * The main loop for the Lisp interpreter
  */
 
+#define _GNU_SOURCE     // for getline. TODO : find an alternative
+
 #include <math.h>
 #include <stdio.h>          // GNU has getline here, but may not work generally
 #include <stdlib.h>

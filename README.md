@@ -10,7 +10,8 @@ This is me following the [Build Your Own Lisp](http://www.buildyourownlisp.com/)
 ## Requirements 
 - For now using the provided MPC parser combinator library.
 - libedit
-- Makefile specifies gcc, but there isn't any special reason for this, clang would work fine.
+- Makefile specifies gcc. I'm using GNU `getline()` at the moment.
+
 
 ## TODO :
 Lots. 
