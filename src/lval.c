@@ -533,7 +533,7 @@ lval* lval_eval_sexpr(lenv* env, lval* val)
     lval* f = lval_pop(val, 0);
     if(f->type != LVAL_FUNC)
     {
-        lval* err =  lval_err("[%s] First element is not a function. Got %s, expected %s",
+        lval* err =  lval_err("[%s] S-Expression starts with incorrect type. Got %s, expected %s",
                 __func__,
                 lval_type_str(f->type),
                 lval_type_str(LVAL_FUNC)

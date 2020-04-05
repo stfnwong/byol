@@ -6,12 +6,13 @@
 This is me following the [Build Your Own Lisp](http://www.buildyourownlisp.com/) book and building a LISP. I did this because I wanted to go through 
 [SCIP](https://mitpress.mit.edu/sites/default/files/sicp/full-text/book/book.html) and figured why not start from scratch?
 
+
 ## Requirements 
 - For now using the provided MPC parser combinator library.
 - libedit
 - Makefile specifies gcc, but there isn't any special reason for this, clang would work fine.
 
 ## TODO :
-Lots. I also want to write my own parser combinator library but who knows when that will happen.  
+Lots. 
 
 There are currently no unit tests. 

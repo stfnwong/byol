@@ -4,7 +4,7 @@
  */
 
 #include <math.h>
-#include <stdio.h>
+#include <stdio.h>          // GNU has getline here, but may not work generally
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>         // for getopt
@@ -186,7 +186,7 @@ int main(int argc, char *argv[])
     {
         // Non interactive mode 
         fprintf(stdout, "[%s] non-interactive mode goes here\n", __func__);
-        FILE* fp;
+        FILE*  fp;
         size_t len = 0;
         char*  line = NULL;
 
@@ -204,14 +204,11 @@ int main(int argc, char *argv[])
             if(read == -1)
                 break;
 
-            //fprintf(stdout, "[%s] %s(%ld chars)\n",
-            //        __func__, line, len);
-            
             mpc_result_t r;
             if(mpc_parse("<stdin>", line, Lispy, &r))
             {
-                // debug print the expressions
                 lval* x = lval_eval(env, lval_read(r.output));
+                // TODO : need to print only the result of eval (or have print function later...)
                 lval_println(x);
                 lval_del(x);
                 mpc_ast_delete(r.output);
