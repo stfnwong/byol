@@ -610,12 +610,23 @@ lval* lval_call(lenv* env, lval* func, lval* val)
             );
         }
 
+        // pop the first symbol from the formals
+        lval* sym  = lval_pop(func->formals, 0);
+
+        // TODO : add special case for & here
         // Get symbol and argument, and bind to enviroment
-        lval* sym = lval_pop(func->formals, 0);
-        lval* val = lval_pop(val, 0); // TODO : memory issue is here...
-        lenv_put(env, sym, val);
+        //lval* nsym = lval_pop(val, 0); 
+        //lenv_put(func->env, nsym, builtin_list(env, val));
+        //lval_del(sym);
+        //lval_del(val);
+
+        // pop the first symbol from the formals 
+        lval* nval = lval_pop(val, 0);
+        // bind a copy into the functions env 
+        lenv_put(func->env, sym, nval);
+        // clean up
         lval_del(sym);
-        lval_del(val);
+        lval_del(nval);
     }
     lval_del(val);
 
@@ -928,16 +939,16 @@ void lenv_add_builtin(lenv* env, char* name, lbuiltin func)
  */
 void lenv_init_builtins(lenv* env)
 {
+    // variable functions
+    lenv_add_builtin(env, "\\",   builtin_lambda);
+    lenv_add_builtin(env, "def",  builtin_def);
+    lenv_add_builtin(env, "=",    builtin_put);
     // list functions 
     lenv_add_builtin(env, "list", builtin_list);
     lenv_add_builtin(env, "head", builtin_head);
     lenv_add_builtin(env, "tail", builtin_tail);
     lenv_add_builtin(env, "eval", builtin_eval);
     lenv_add_builtin(env, "join", builtin_join);
-    lenv_add_builtin(env, "\\",   builtin_lambda);
-    lenv_add_builtin(env, "def",  builtin_def);
-    lenv_add_builtin(env, "=",    builtin_put);
-
     // operators
     lenv_add_builtin(env, "+",   builtin_add);
     lenv_add_builtin(env, "-",   builtin_sub);
