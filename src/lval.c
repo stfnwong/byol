@@ -543,7 +543,6 @@ lval* lval_eval_sexpr(lenv* env, lval* val)
         return err;
     }
 
-    // call builtin with operator
     lval* result = lval_call(env, f, val);
     lval_del(f);
     
@@ -614,11 +613,6 @@ lval* lval_call(lenv* env, lval* func, lval* val)
         lval* sym  = lval_pop(func->formals, 0);
 
         // TODO : add special case for & here
-        // Get symbol and argument, and bind to enviroment
-        //lval* nsym = lval_pop(val, 0); 
-        //lenv_put(func->env, nsym, builtin_list(env, val));
-        //lval_del(sym);
-        //lval_del(val);
 
         // pop the first symbol from the formals 
         lval* nval = lval_pop(val, 0);
@@ -640,6 +634,17 @@ lval* lval_call(lenv* env, lval* func, lval* val)
         );
     }
         return lval_copy(func);
+}
+
+/*
+ * lval_builtin()
+ */
+lval* lval_builtin(lbuiltin func)
+{
+    lval* v = malloc(sizeof(lval));
+    v->type = LVAL_FUNC;
+    v->builtin = func;
+    return v;
 }
 
 /*
@@ -928,7 +933,7 @@ lval* builtin_max(lenv* env, lval* val)
 void lenv_add_builtin(lenv* env, char* name, lbuiltin func)
 {
     lval* sym_name = lval_sym(name);
-    lval* function = lval_func(func);
+    lval* function = lval_builtin(func);
     lenv_put(env, sym_name, function);
     lval_del(sym_name);
     lval_del(function);

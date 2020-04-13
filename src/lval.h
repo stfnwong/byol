@@ -177,7 +177,10 @@ lval* lval_builtin_eval(lenv* env, lval* val);
  * lval_call()
  */
 lval* lval_call(lenv* env, lval* func, lval* val);
-
+/*
+ * lval_builtin()
+ */
+lval* lval_builtin(lbuiltin func);
 
 
 /*
