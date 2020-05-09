@@ -25,7 +25,6 @@ ReplOpts* repl_opts_create(void)
 {
     ReplOpts* opts;
 
-
     opts = malloc(sizeof(*opts));
     if(!opts)
     {
@@ -99,7 +98,6 @@ lval* lval_read_decimal(mpc_ast_t* ast)
  */
 lval* lval_read(mpc_ast_t* ast)
 {
-    fprintf(stdout, "[%s] (%s)\n", __func__, ast->tag);
     // If input is a symbol or a number then return a conversion to that type
     if(strstr(ast->tag, "number"))
         return lval_read_num(ast);
@@ -112,7 +110,6 @@ lval* lval_read(mpc_ast_t* ast)
     lval* val = NULL;
     if(strcmp(ast->tag, ">") == 0)  // TODO :never evaluates true?
     {
-        fprintf(stdout, "[%s] ast->tag has >\n", __func__);
         val = lval_sexpr();
     }
     if(strstr(ast->tag, "sexpr"))
