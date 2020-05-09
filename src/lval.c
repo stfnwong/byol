@@ -200,14 +200,14 @@ lval* lval_copy(lval* val)
     {
         // numbers and functions can be copied directly
         case LVAL_FUNC:
-            if(val->builtin != NULL)        // TODO : segfault from here
+            if(val->builtin)
                 out->builtin = val->builtin;
             else
             {
-                val->builtin = NULL;
-                val->env     = lenv_copy(val->env);
-                val->formals = lval_copy(val->formals);
-                val->body    = lval_copy(val->body);
+                out->builtin = NULL;
+                out->env     = lenv_copy(val->env);
+                out->formals = lval_copy(val->formals);
+                out->body    = lval_copy(val->body);
             }
             break;
 
@@ -646,7 +646,8 @@ lval* lval_call(lenv* env, lval* func, lval* val)
         func->env->parent = env;
         return builtin_eval(
                 func->env, 
-                lval_add(lval_sexpr(), lval_copy(func->body))
+                lval_add(lval_sexpr(), 
+                lval_copy(func->body))
         );
     }
     // otherwise return partially evaluated function
