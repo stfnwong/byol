@@ -99,18 +99,22 @@ lval* lval_read_decimal(mpc_ast_t* ast)
  */
 lval* lval_read(mpc_ast_t* ast)
 {
+    fprintf(stdout, "[%s] (%s)\n", __func__, ast->tag);
     // If input is a symbol or a number then return a conversion to that type
     if(strstr(ast->tag, "number"))
         return lval_read_num(ast);
-    if(strstr(ast->tag, "decimal"))
-        return lval_read_decimal(ast);
+    //if(strstr(ast->tag, "decimal"))
+    //    return lval_read_decimal(ast);
     if(strstr(ast->tag, "symbol"))
         return lval_sym(ast->contents);
 
     // If this is the root (>) or an S-expr then create an empty list 
     lval* val = NULL;
-    if(strncmp(ast->tag, ">", 1) == 0)
+    if(strcmp(ast->tag, ">") == 0)  // TODO :never evaluates true?
+    {
+        fprintf(stdout, "[%s] ast->tag has >\n", __func__);
         val = lval_sexpr();
+    }
     if(strstr(ast->tag, "sexpr"))
         val = lval_sexpr();
     if(strstr(ast->tag, "qexpr"))
@@ -136,6 +140,16 @@ lval* lval_read(mpc_ast_t* ast)
     return val;
 }
 
+//char* readline(char* prompt) {
+//    fputs(prompt, stdout);
+//    fgets(buffer, 2048, stdin);
+//    char* cpy = malloc(strlen(buffer)+1);
+//    strcpy(cpy, buffer);
+//    cpy[strlen(cpy)-1] = '\0';
+//
+//    return cpy;
+//}
+
 int main(int argc, char *argv[])
 {
     // Deal with args
@@ -147,7 +161,6 @@ int main(int argc, char *argv[])
     do
     {
         opt = getopt(argc, argv, "");
-
     } while(opt != -1);
 
     if(optind < argc)
@@ -186,8 +199,6 @@ int main(int argc, char *argv[])
 
     if(repl_opts->filename != NULL)
     {
-        // Non interactive mode 
-        fprintf(stdout, "[%s] non-interactive mode goes here\n", __func__);
         FILE*  fp;
         size_t len = 0;
         char*  line = NULL;
@@ -224,6 +235,7 @@ int main(int argc, char *argv[])
     }
     else
     {
+        fprintf(stdout, "Lispy 0.0001\n");
         // main loop
         while(1)
         {
