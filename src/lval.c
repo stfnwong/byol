@@ -612,7 +612,24 @@ lval* lval_call(lenv* env, lval* func, lval* val)
         // pop the first symbol from the formals
         lval* sym  = lval_pop(func->formals, 0);
 
-        // TODO : add special case for & here
+        // if there is an '&' here, deal with varargs 
+        if(strcmp(sym->sym, "&") == 0)
+        {
+            // make sure there is another symbol
+            if(func->formals->count != 1)
+            {
+                lval_del(val);
+                return lval_err("[%s] Function format invalid. Symbol '&' must be followed by a single symbol", __func__);
+            }
+
+            // next formal should be bound to remaining args 
+            lval* nsym = lval_pop(func->formals, 0);
+            lenv_put(func->env, nsym, builtin_list(env, val));
+            lval_del(sym);
+            lval_del(nsym);
+
+            break;
+        }
 
         // pop the first symbol from the formals 
         lval* nval = lval_pop(val, 0);
@@ -625,6 +642,26 @@ lval* lval_call(lenv* env, lval* func, lval* val)
 
     // Now that all formals are bound we can clean-up and evaluate 
     lval_del(val);          
+    // if we have a '&' in the formal list, bind to an empty list
+    if((func->formals->count > 0) && (strcmp(func->formals->cell[0]->sym, "&") == 0))
+    {
+        // check that '&' is passed correctly 
+        if(func->formals->count != 2)
+        {
+            return lval_err("[%s] Function format invalid. Symbol '&' must be followed by a single symbol", __func__);
+        }
+
+        // pop and delete '&'
+        lval_del(lval_pop(func->formals, 0));
+        // pop next symbol, create empty list 
+        lval* sym = lval_pop(func->formals, 0);
+        lval* nval = lval_qexpr();
+        // bind to env and delete
+        lenv_put(func->env, sym, nval);
+        lval_del(sym);
+        lval_del(nval);
+    }
+
     if(func->formals->count == 0)
     {
         func->env->parent = env;
