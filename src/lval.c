@@ -687,6 +687,65 @@ lval* lval_builtin(lbuiltin func)
 }
 
 /*
+ * Equality testing
+ */
+int lval_eq(lval* a, lval* b)
+{
+    // we say that two lvals are equal if all of their fields are equal,
+    // and are unequal if any of thier fields are unequal.
+    if(a->type != b->type)
+        return 0;
+    
+    switch(a->type)
+    {
+        case LVAL_NUM:
+        case LVAL_DECIMAL:
+            return (a->num == b->num);
+        case LVAL_ERR:
+            return strcmp(a->err, b->err) == 0;
+        case LVAL_SYM:
+            return (a->sym == b->sym);
+        case LVAL_FUNC:
+            if(a->builtin || b->builtin)
+                return (a->builtin == b->builtin);
+            return lval_eq(a->formals, b->formals) && lval_eq(a->body, b->body);
+        // For lists, compare all the elements in the list
+        case LVAL_QEXPR:
+        case LVAL_SEXPR:
+            if(a->count != b->count)
+                return 0;
+            for(int i = 0; i < a->count; ++i)
+            {
+                if(!lval_eq(a->cell[i], b->cell[i]))
+                    return 0;
+            }
+
+            return 1;
+    }
+
+    return 0;       // if we get to here, then we don't know what happened and that can't be equal
+}
+
+/*
+ * builtin_cmp
+ */
+lval* builtin_cmp(lenv* env, lval* val, char* op)
+{
+    LVAL_ASSERT_NUM(op, val, 2);
+
+    int result;
+    if(strcmp(op, "==") == 0)
+        result = lval_eq(val->cell[0], val->cell[1]);
+    if(strcmp(op, "!=") == 0)
+        result = !lval_eq(val->cell[0], val->cell[1]);
+
+    lval_del(val);
+
+    return lval_num(result);
+}
+
+
+/*
  * lval_sexpr_print()
  */
 void lval_sexpr_print(lval* val, char open, char close)
@@ -933,6 +992,28 @@ lval* builtin_put(lenv* env, lval* val)
 
 // Mathematical operators 
 
+lval* builtin_ord(lenv* env, lval* val, char* op)
+{
+    LVAL_ASSERT_NUM(op, val, 2);
+    LVAL_ASSERT_TYPE(op, val, 0, LVAL_NUM);
+    LVAL_ASSERT_TYPE(op, val, 1, LVAL_NUM);
+
+    // comparisons in lispy work as they do in C. That is, 
+    // 0 == false, all else == true
+    int result;
+    if(strcmp(op, ">") == 0)
+        result = (val->cell[0]->num > val->cell[1]->num);
+    if(strcmp(op, "<") == 0)
+        result = (val->cell[0]->num < val->cell[1]->num);
+    if(strcmp(op, ">=") == 0)
+        result = (val->cell[0]->num >= val->cell[1]->num);
+    if(strcmp(op, "<=") == 0)
+        result = (val->cell[0]->num <= val->cell[1]->num);
+
+    lval_del(val);
+    return lval_num(result);
+}
+
 lval* builtin_add(lenv* env, lval* val)
 {
     return lval_builtin_op(val, "+");
@@ -965,6 +1046,52 @@ lval* builtin_max(lenv* env, lval* val)
 {
     return lval_builtin_op(val, "max");
 }
+lval* builtin_gt(lenv* env, lval* val)
+{
+    return builtin_ord(env, val, ">");
+}
+lval* builtin_lt(lenv* env, lval* val)
+{
+    return builtin_ord(env, val, "<");
+}
+lval* builtin_ge(lenv* env, lval* val)
+{
+    return builtin_ord(env, val, ">=");
+}
+lval* builtin_le(lenv* env, lval* val)
+{
+    return builtin_ord(env, val, "<=");
+}
+lval* builtin_eq(lenv* env, lval* val)
+{
+    return builtin_cmp(env, val, "==");
+}
+lval* builtin_ne(lenv* env, lval* val)
+{
+    return builtin_cmp(env, val, "!=");
+}
+
+lval* builtin_if(lenv* env, lval* val)
+{
+    LVAL_ASSERT_NUM("if", val, 3);
+    LVAL_ASSERT_TYPE("if", val, 0, LVAL_NUM);
+    LVAL_ASSERT_TYPE("if", val, 1, LVAL_QEXPR);
+    LVAL_ASSERT_TYPE("if", val, 2, LVAL_QEXPR);
+
+    // mark both expressions as evaluable
+    lval* x;
+    val->cell[1]->type = LVAL_SEXPR;
+    val->cell[2]->type = LVAL_SEXPR;
+
+    if(val->cell[0]->num)       // eval first expression
+        x = lval_eval(env, lval_pop(val, 1));
+    else                        // otherwise eval second expression
+        x = lval_eval(env, lval_pop(val, 2));
+    lval_del(val);
+
+    return x;
+}
+
 
 /*
  * lenv_add_builtin()
@@ -1002,4 +1129,13 @@ void lenv_init_builtins(lenv* env)
     lenv_add_builtin(env, "^",   builtin_pow);
     lenv_add_builtin(env, "min", builtin_min);
     lenv_add_builtin(env, "max", builtin_max);
+
+    // comparison functions
+    lenv_add_builtin(env, "if", builtin_if);
+    lenv_add_builtin(env, "==", builtin_eq);
+    lenv_add_builtin(env, "!=", builtin_ne);
+    lenv_add_builtin(env, ">",  builtin_gt);
+    lenv_add_builtin(env, "<",  builtin_lt);
+    lenv_add_builtin(env, ">=", builtin_ge);
+    lenv_add_builtin(env, "<=", builtin_le);
 }

@@ -182,6 +182,13 @@ lval* lval_call(lenv* env, lval* func, lval* val);
  */
 lval* lval_builtin(lbuiltin func);
 
+/*
+ * equality tests
+ */
+int lval_eq(lval* a, lval* b);
+
+lval* builtin_cmp(lenv* env, lval* val, char* op);
+
 
 /*
  * lval_sexpr_print()
@@ -241,6 +248,7 @@ lval* builtin_def(lenv* env, lval* val);
 lval* builtin_put(lenv* env, lval* val);
 
 // operations
+lval* builtin_ord(lenv* env, lval* val, char* op);
 lval* builtin_add(lenv* env, lval* val);
 lval* builtin_sub(lenv* env, lval* val);
 lval* builtin_mul(lenv* env, lval* val);
@@ -249,6 +257,15 @@ lval* builtin_mod(lenv* env, lval* val);
 lval* builtin_pow(lenv* env, lval* val);
 lval* builtin_min(lenv* env, lval* val);
 lval* builtin_max(lenv* env, lval* val);
+
+// conditionals 
+lval* builtin_gt(lenv* env, lval* val);
+lval* builtin_lt(lenv* env, lval* val);
+lval* builtin_ge(lenv* env, lval* val);
+lval* builtin_le(lenv* env, lval* val);
+lval* builtin_eq(lenv* env, lval* val);
+lval* builtin_ne(lenv* env, lval* val);
+lval* builtin_if(lenv* env, lval* val);
 
 /*
  * lenv_add_builtin()

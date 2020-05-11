@@ -7,3 +7,6 @@ tags
 
 # Ignore core dumps
 vgcore*
+
+# Ignore repl binary
+bin/repl
