@@ -12,7 +12,7 @@
  * __lval_create()
  * Private lval constructor
  */
-lval* __lval_create(long num, double decimal, char* m, char* s, int type)
+lval* __lval_create(long num, double decimal, char* m, char* s, char* str, int type)
 {
     lval* val;
 
@@ -41,6 +41,13 @@ lval* __lval_create(long num, double decimal, char* m, char* s, int type)
     }
     else
         val->sym   = NULL;
+    if(str != NULL)
+    {
+        val->str = malloc(strlen(str) + 1);
+        strcpy(val->str, str);
+    }
+    else
+        val->str = NULL;
 
     val->builtin = NULL;     
     val->env     = NULL;
@@ -59,7 +66,7 @@ lval* __lval_create(long num, double decimal, char* m, char* s, int type)
  */
 lval* lval_num(long x)
 {
-    return __lval_create(x, 0.0f, NULL, NULL, LVAL_NUM);
+    return __lval_create(x, 0.0f, NULL, NULL, NULL, LVAL_NUM);
 }
 
 /*
@@ -67,7 +74,7 @@ lval* lval_num(long x)
  */
 lval* lval_decimal(double x)
 {
-    return __lval_create(0, x, NULL, NULL, LVAL_DECIMAL);
+    return __lval_create(0, x, NULL, NULL, NULL, LVAL_DECIMAL);
 }
 
 /*
@@ -76,7 +83,7 @@ lval* lval_decimal(double x)
  */
 lval* lval_err(char* fmt, ...)
 {
-    lval* verr = __lval_create(0, 0.0f, NULL, NULL, LVAL_ERR);
+    lval* verr = __lval_create(0, 0.0f, NULL, NULL, NULL, LVAL_ERR);
 
     // create a new va_list 
     va_list va;
@@ -97,7 +104,15 @@ lval* lval_err(char* fmt, ...)
  */
 lval* lval_sym(char* s)
 {
-    return __lval_create(0, 0.0f, NULL, s, LVAL_SYM);
+    return __lval_create(0, 0.0f, NULL, s, NULL, LVAL_SYM);
+}
+
+/*
+ * lval_str()
+ */
+lval* lval_str(char* str)
+{
+    return __lval_create(0, 0.0f, NULL, NULL, str, LVAL_STR);
 }
 
 /*
@@ -105,7 +120,7 @@ lval* lval_sym(char* s)
  */
 lval* lval_sexpr(void)
 {
-    return __lval_create(0, 0.0f, NULL, NULL, LVAL_SEXPR);
+    return __lval_create(0, 0.0f, NULL, NULL, NULL, LVAL_SEXPR);
 }
 
 /*
@@ -113,7 +128,7 @@ lval* lval_sexpr(void)
  */
 lval* lval_qexpr(void)
 {
-    return __lval_create(0, 0.0f, NULL, NULL, LVAL_QEXPR);
+    return __lval_create(0, 0.0f, NULL, NULL, NULL, LVAL_QEXPR);
 }
 
 /*
@@ -121,7 +136,7 @@ lval* lval_qexpr(void)
  */
 lval* lval_func(lbuiltin func)
 {
-    lval* val = __lval_create(0, 0.0f, NULL, NULL, LVAL_FUNC);
+    lval* val = __lval_create(0, 0.0f, NULL, NULL, NULL, LVAL_FUNC);
     val->builtin = func;
 
     return val;
@@ -132,7 +147,7 @@ lval* lval_func(lbuiltin func)
  */
 lval* lval_lambda(lval* formals, lval* body)
 {
-    lval* val = __lval_create(0, 0.0f, NULL, NULL, LVAL_FUNC);
+    lval* val = __lval_create(0, 0.0f, NULL, NULL, NULL, LVAL_FUNC);
 
     val->builtin = NULL;
     val->env     = lenv_new();
@@ -165,6 +180,9 @@ void lval_del(lval* val)
             break;      // nothing extra to do
         case LVAL_SYM:
             free(val->sym);
+            break;
+        case LVAL_STR:
+            free(val->str);
             break;
         case LVAL_SEXPR:
         case LVAL_QEXPR:
@@ -221,6 +239,11 @@ lval* lval_copy(lval* val)
             strcpy(out->sym, val->sym);
             break;
 
+        case LVAL_STR:
+            out->str = malloc(strlen(val->str) + 1);
+            strcpy(out->str, val->str);
+            break;
+
         case LVAL_SEXPR:
         case LVAL_QEXPR:
             out->count = val->count;
@@ -262,6 +285,9 @@ void lval_print(lval* v)
         case LVAL_SYM:
             fprintf(stdout, "%s", v->sym);
             break;
+        case LVAL_STR:
+            lval_print_str(v);
+            break;
         case LVAL_SEXPR:
             lval_sexpr_print(v, '(', ')');
             break;
@@ -269,6 +295,21 @@ void lval_print(lval* v)
             lval_sexpr_print(v, '{', '}');
             break;
     }
+}
+
+/*
+ * lval_print_str()
+ */
+void lval_print_str(lval* val)
+{
+    char* escaped;
+
+    escaped = malloc(strlen(val->str) + 1);
+    strcpy(escaped, val->str);
+    // escape the characters in the string 
+    escaped = mpcf_escape(escaped);
+    fprintf(stdout, "\"%s\"", escaped);
+    free(escaped);
 }
 
 
@@ -298,6 +339,8 @@ char* lval_type_str(lval_type t)
             return "Error";
         case LVAL_SYM:
             return "Symbol";
+        case LVAL_STR:
+            return "String";
         case LVAL_SEXPR:
             return "S-Expression";
         case LVAL_QEXPR:
@@ -705,6 +748,8 @@ int lval_eq(lval* a, lval* b)
             return strcmp(a->err, b->err) == 0;
         case LVAL_SYM:
             return (a->sym == b->sym);
+        case LVAL_STR:
+            return (strcmp(a->str, b->str) == 0);
         case LVAL_FUNC:
             if(a->builtin || b->builtin)
                 return (a->builtin == b->builtin);

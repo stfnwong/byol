@@ -94,6 +94,24 @@ lval* lval_read_decimal(mpc_ast_t* ast)
 }
 
 /*
+ * lval_read_str()
+ */
+lval* lval_read_str(mpc_ast_t* ast)
+{
+    // remove the final quote character 
+    ast->contents[strlen(ast->contents)-1] = '\0';
+    // copy the string without the first quote character
+    char* unescaped = malloc(strlen(ast->contents + 1) + 1);
+    strcpy(unescaped, ast->contents+1);     
+    unescaped = mpcf_unescape(unescaped);
+    // construct a new lval containing the string 
+    lval* str = lval_str(unescaped);
+    free(unescaped);
+
+    return str;
+}
+
+/*
  * lval_read()
  */
 lval* lval_read(mpc_ast_t* ast)
@@ -105,6 +123,8 @@ lval* lval_read(mpc_ast_t* ast)
     //    return lval_read_decimal(ast);
     if(strstr(ast->tag, "symbol"))
         return lval_sym(ast->contents);
+    if(strstr(ast->tag, "string"))
+        return lval_read_str(ast);
 
     // If this is the root (>) or an S-expr then create an empty list 
     lval* val = NULL;
@@ -171,6 +191,7 @@ int main(int argc, char *argv[])
     mpc_parser_t* Number  = mpc_new("number");
     mpc_parser_t* Decimal = mpc_new("decimal");
     mpc_parser_t* Symbol  = mpc_new("symbol");
+    mpc_parser_t* String  = mpc_new("string");
     mpc_parser_t* Sexpr   = mpc_new("sexpr");
     mpc_parser_t* Qexpr   = mpc_new("qexpr");
     mpc_parser_t* Expr    = mpc_new("expr");
@@ -182,12 +203,13 @@ int main(int argc, char *argv[])
         number   : /-?[0-9]+/  ;                              \
         decimal  : /-?([0-9]*[.])?[0-9]+/  ;                  \
         symbol   : /[a-zA-Z0-9_+\\-*\\/\\\\=<>!&]+/;          \
+        string   : /\"(\\\\.|[^\"])*\"/ ;                     \
         sexpr    : '(' <expr>* ')';                           \
         qexpr    : '{' <expr>* '}';                           \
-        expr     : <number> | <symbol> | <sexpr> | <qexpr> ;  \
+        expr     : <number> | <symbol> | <sexpr> | <qexpr> | <string> ;  \
         lispy    : /^/ <expr>* /$/ ;                          \
       ",
-      Number, Decimal, Symbol, Sexpr, Qexpr, Expr, Lispy
+      Number, Decimal, Symbol, String, Sexpr, Qexpr, Expr, Lispy
     );
 
     // get a new lisp environment
@@ -232,7 +254,7 @@ int main(int argc, char *argv[])
     }
     else
     {
-        fprintf(stdout, "Lispy 0.0001\n");
+        fprintf(stdout, "Lispy 0.0002\n");
         // main loop
         while(1)
         {

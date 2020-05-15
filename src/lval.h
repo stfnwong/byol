@@ -44,7 +44,8 @@ typedef enum
     LVAL_FUNC,
     LVAL_SYM,
     LVAL_SEXPR,
-    LVAL_QEXPR
+    LVAL_QEXPR,
+    LVAL_STR
 } lval_type;
 
 // lval errors
@@ -74,6 +75,7 @@ struct lval
     // error and symbol types have some string data
     char*     err;
     char*     sym;
+    char*     str;
     // Functions
     lbuiltin  builtin;
     lenv*     env;
@@ -89,6 +91,7 @@ lval* lval_num(long x);
 lval* lval_decimal(double x);
 lval* lval_err(char* fmt, ...);
 lval* lval_sym(char* s);
+lval* lval_str(char* s);
 lval* lval_sexpr(void);
 lval* lval_qexpr(void);
 lval* lval_func(lbuiltin func);
@@ -103,6 +106,7 @@ lval* lval_copy(lval* val);
 
 // Display
 void  lval_print(lval* v);
+void  lval_print_str(lval* v);
 void  lval_println(lval* v);
 char* lval_type_str(lval_type t);
 
