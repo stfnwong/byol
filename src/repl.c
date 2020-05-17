@@ -17,6 +17,18 @@
 #include "repl.h"
 
 
+// Parsers for individual components
+mpc_parser_t* Number;
+mpc_parser_t* Decimal; 
+mpc_parser_t* Symbol;  
+mpc_parser_t* String ; 
+mpc_parser_t* Comment ;
+mpc_parser_t* Sexpr   ;
+mpc_parser_t* Qexpr   ;
+mpc_parser_t* Expr    ;
+mpc_parser_t* Lispy   ;
+
+
 // =============== REPL OPTS 
 /*
  * create_repl_opts()
@@ -111,6 +123,84 @@ lval* lval_read_str(mpc_ast_t* ast)
     return str;
 }
 
+// TODO : I think this should be here even though its a builtin, because
+// it deals with mcp_result types
+/*
+ * builtin_load()
+ */
+lval* builtin_load(lenv* env, lval* a)
+{
+    LVAL_ASSERT_NUM("load", a, 1);
+    LVAL_ASSERT_TYPE("load", a, 0, LVAL_STR);
+
+    // parse file given by string name 
+    mpc_result_t result;
+    if(mpc_parse_contents(a->cell[0]->str, Lispy, &result))
+    {
+        lval* expr = lval_read(result.output);
+        mpc_ast_delete(result.output);
+
+        // evaluate each expression 
+        while(expr->count)
+        {
+            lval* x = lval_eval(env, lval_pop(expr, 0));
+            if(x->type == LVAL_ERR)
+                lval_println(x);
+            lval_del(x);
+        }
+        // clean up expressions and arguments 
+        lval_del(expr);
+        lval_del(a);
+
+        return lval_sexpr();        // return empty list
+    }
+    else
+    {
+        // get the parse error as a string 
+        char* err_msg = mpc_err_string(result.error);
+        mpc_err_delete(result.error);
+
+        lval* err = lval_err("Could not load library %s", err_msg);
+        free(err_msg);
+        lval_del(a);
+
+        return err;
+    }
+}
+
+/*
+ * builtin_print()
+ */
+lval* builtin_print(lenv* env, lval* a)
+{
+    for(int i = 0; i < a->count; ++i)
+    {
+        lval_print(a->cell[i]);
+        fprintf(stdout, ",");
+    }
+
+    fprintf(stdout, "\n");
+    lval_del(a);
+
+    return lval_sexpr();
+}
+
+/*
+ * builtin_error()
+ */
+lval* builtin_error(lenv* env, lval* a)
+{
+    LVAL_ASSERT_NUM("error", a, 1);
+    LVAL_ASSERT_TYPE("error", a, 0, LVAL_STR);
+
+    // construct error from first argument
+    lval* err = lval_err(a->cell[0]->str);
+    lval_del(a);
+
+    return err;
+}
+
+
 /*
  * lval_read()
  */
@@ -151,6 +241,8 @@ lval* lval_read(mpc_ast_t* ast)
             continue;
         if(strncmp(ast->children[i]->tag, "regex", 5) == 0)
             continue;
+        if(strstr(ast->children[i]->tag, "comment"))
+            continue;
         val = lval_add(val, lval_read(ast->children[i]));
     }
 
@@ -173,29 +265,34 @@ int main(int argc, char *argv[])
     int opt;
     extern int optind;  // for checking filename
 
+    // get a new lisp environment
+    lenv* env = lenv_new();
+    lenv_init_builtins(env);
+
     ReplOpts* repl_opts = repl_opts_create();
 
-    do
+    if(argc >= 2)
     {
-        opt = getopt(argc, argv, "");
-    } while(opt != -1);
-
-    if(optind < argc)
-    {
-        char* filename = argv[optind];
-        // Move to options 
-        repl_opts_add_filename(repl_opts, filename);
+        for(int i = 1; i < argc; ++i)
+        {
+            lval* args = lval_add(lval_sexpr(), lval_str(argv[i]));
+            lval* x = builtin_load(env, args);
+            if(x->type == LVAL_ERR)
+                lval_println(x);
+            lval_del(x);
+        }
     }
 
-    // Parsers for individual components
-    mpc_parser_t* Number  = mpc_new("number");
-    mpc_parser_t* Decimal = mpc_new("decimal");
-    mpc_parser_t* Symbol  = mpc_new("symbol");
-    mpc_parser_t* String  = mpc_new("string");
-    mpc_parser_t* Sexpr   = mpc_new("sexpr");
-    mpc_parser_t* Qexpr   = mpc_new("qexpr");
-    mpc_parser_t* Expr    = mpc_new("expr");
-    mpc_parser_t* Lispy   = mpc_new("lispy");
+    Number  = mpc_new("number");
+    Decimal = mpc_new("decimal");
+    Symbol  = mpc_new("symbol");
+    String  = mpc_new("string");
+    Comment = mpc_new("comment");
+    Sexpr   = mpc_new("sexpr");
+    Qexpr   = mpc_new("qexpr");
+    Expr    = mpc_new("expr");
+    Lispy   = mpc_new("lispy");
+
 
     /* Define them with the following Language */
     mpca_lang(MPCA_LANG_DEFAULT,
@@ -204,17 +301,15 @@ int main(int argc, char *argv[])
         decimal  : /-?([0-9]*[.])?[0-9]+/  ;                  \
         symbol   : /[a-zA-Z0-9_+\\-*\\/\\\\=<>!&]+/;          \
         string   : /\"(\\\\.|[^\"])*\"/ ;                     \
+        comment  : /;[^\\r\\n]*/ ;                            \
         sexpr    : '(' <expr>* ')';                           \
         qexpr    : '{' <expr>* '}';                           \
-        expr     : <number> | <symbol> | <sexpr> | <qexpr> | <string> ;  \
+        expr     : <number> | <symbol> | <sexpr> | <qexpr>    \
+                 | <string> | <comment> ;                     \
         lispy    : /^/ <expr>* /$/ ;                          \
       ",
-      Number, Decimal, Symbol, String, Sexpr, Qexpr, Expr, Lispy
+      Number, Decimal, Symbol, String, Comment, Sexpr, Qexpr, Expr, Lispy
     );
-
-    // get a new lisp environment
-    lenv* env = lenv_new();
-    lenv_init_builtins(env);
 
     if(repl_opts->filename != NULL)
     {
@@ -287,7 +382,17 @@ CLEANUP:
     repl_opts_destroy(repl_opts);
 
     // cleanup parsers 
-    mpc_cleanup(6, Number, Decimal, Symbol, Sexpr, Qexpr, Expr, Lispy);
+    mpc_cleanup(8, 
+            Number, 
+            Decimal, 
+            Symbol, 
+            String, 
+            Comment, 
+            Sexpr, 
+            Qexpr, 
+            Expr, 
+            Lispy
+    );
 
     return 0;
 }
