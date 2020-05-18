@@ -271,6 +271,11 @@ lval* builtin_eq(lenv* env, lval* val);
 lval* builtin_ne(lenv* env, lval* val);
 lval* builtin_if(lenv* env, lval* val);
 
+// terminal builtins 
+lval* builtin_load(lenv* env, lval* val);
+lval* builtin_print(lenv* env, lval* val);
+lval* builtin_error(lenv* env, lval* val);
+
 /*
  * lenv_add_builtin()
  */

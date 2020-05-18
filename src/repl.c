@@ -15,18 +15,7 @@
 //#include <editline/history.h>
 // MPC library 
 #include "repl.h"
-
-
-// Parsers for individual components
-mpc_parser_t* Number;
-mpc_parser_t* Decimal; 
-mpc_parser_t* Symbol;  
-mpc_parser_t* String ; 
-mpc_parser_t* Comment ;
-mpc_parser_t* Sexpr   ;
-mpc_parser_t* Qexpr   ;
-mpc_parser_t* Expr    ;
-mpc_parser_t* Lispy   ;
+#include "parsers.h"
 
 
 // =============== REPL OPTS 
@@ -123,8 +112,6 @@ lval* lval_read_str(mpc_ast_t* ast)
     return str;
 }
 
-// TODO : I think this should be here even though its a builtin, because
-// it deals with mcp_result types
 /*
  * builtin_load()
  */
@@ -167,39 +154,6 @@ lval* builtin_load(lenv* env, lval* a)
         return err;
     }
 }
-
-/*
- * builtin_print()
- */
-lval* builtin_print(lenv* env, lval* a)
-{
-    for(int i = 0; i < a->count; ++i)
-    {
-        lval_print(a->cell[i]);
-        fprintf(stdout, ",");
-    }
-
-    fprintf(stdout, "\n");
-    lval_del(a);
-
-    return lval_sexpr();
-}
-
-/*
- * builtin_error()
- */
-lval* builtin_error(lenv* env, lval* a)
-{
-    LVAL_ASSERT_NUM("error", a, 1);
-    LVAL_ASSERT_TYPE("error", a, 0, LVAL_STR);
-
-    // construct error from first argument
-    lval* err = lval_err(a->cell[0]->str);
-    lval_del(a);
-
-    return err;
-}
-
 
 /*
  * lval_read()
@@ -249,20 +203,11 @@ lval* lval_read(mpc_ast_t* ast)
     return val;
 }
 
-//char* readline(char* prompt) {
-//    fputs(prompt, stdout);
-//    fgets(buffer, 2048, stdin);
-//    char* cpy = malloc(strlen(buffer)+1);
-//    strcpy(cpy, buffer);
-//    cpy[strlen(cpy)-1] = '\0';
-//
-//    return cpy;
-//}
 
+// ================ ENTRY POINT ============== //
 int main(int argc, char *argv[])
 {
     // Deal with args
-    int opt;
     extern int optind;  // for checking filename
 
     // get a new lisp environment

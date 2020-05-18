@@ -7,6 +7,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include "lval.h"
+#include "mpc.h"
+
+#include "parsers.h"
 
 /*
  * __lval_create()
@@ -1137,6 +1140,40 @@ lval* builtin_if(lenv* env, lval* val)
     return x;
 }
 
+// Terminal builtins
+
+/*
+ * builtin_print()
+ */
+lval* builtin_print(lenv* env, lval* a)
+{
+    for(int i = 0; i < a->count; ++i)
+    {
+        lval_print(a->cell[i]);
+        fprintf(stdout, ",");
+    }
+
+    fprintf(stdout, "\n");
+    lval_del(a);
+
+    return lval_sexpr();
+}
+
+/*
+ * builtin_error()
+ */
+lval* builtin_error(lenv* env, lval* a)
+{
+    LVAL_ASSERT_NUM("error", a, 1);
+    LVAL_ASSERT_TYPE("error", a, 0, LVAL_STR);
+
+    // construct error from first argument
+    lval* err = lval_err(a->cell[0]->str);
+    lval_del(a);
+
+    return err;
+}
+
 
 /*
  * lenv_add_builtin()
@@ -1183,4 +1220,9 @@ void lenv_init_builtins(lenv* env)
     lenv_add_builtin(env, "<",  builtin_lt);
     lenv_add_builtin(env, ">=", builtin_ge);
     lenv_add_builtin(env, "<=", builtin_le);
+    
+    // terminal functions 
+    lenv_add_builtin(env, "load", builtin_load);
+    lenv_add_builtin(env, "print", builtin_print);
+    lenv_add_builtin(env, "error", builtin_error);
 }
