@@ -1222,7 +1222,7 @@ void lenv_init_builtins(lenv* env)
     lenv_add_builtin(env, "<=", builtin_le);
     
     // terminal functions 
-    lenv_add_builtin(env, "load", builtin_load);
+    lenv_add_builtin(env, "load",  builtin_load);
     lenv_add_builtin(env, "print", builtin_print);
     lenv_add_builtin(env, "error", builtin_error);
 }

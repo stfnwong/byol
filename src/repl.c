@@ -130,6 +130,7 @@ lval* builtin_load(lenv* env, lval* a)
         // evaluate each expression 
         while(expr->count)
         {
+            fprintf(stdout, "[%s] evaluating expr %d\n", __func__, expr->count + 1);
             lval* x = lval_eval(env, lval_pop(expr, 0));
             if(x->type == LVAL_ERR)
                 lval_println(x);
@@ -209,24 +210,13 @@ int main(int argc, char *argv[])
 {
     // Deal with args
     extern int optind;  // for checking filename
+    const char* version_string = "1.002";
 
     // get a new lisp environment
     lenv* env = lenv_new();
     lenv_init_builtins(env);
 
     ReplOpts* repl_opts = repl_opts_create();
-
-    if(argc >= 2)
-    {
-        for(int i = 1; i < argc; ++i)
-        {
-            lval* args = lval_add(lval_sexpr(), lval_str(argv[i]));
-            lval* x = builtin_load(env, args);
-            if(x->type == LVAL_ERR)
-                lval_println(x);
-            lval_del(x);
-        }
-    }
 
     Number  = mpc_new("number");
     Decimal = mpc_new("decimal");
@@ -256,46 +246,12 @@ int main(int argc, char *argv[])
       Number, Decimal, Symbol, String, Comment, Sexpr, Qexpr, Expr, Lispy
     );
 
-    if(repl_opts->filename != NULL)
+    // interactive prompt
+    if(argc == 1)
     {
-        FILE*  fp;
-        size_t len = 0;
-        char*  line = NULL;
+        fprintf(stdout, "Lispy version %s\n", version_string);
+        fprintf(stdout, "Press Ctrl+C to exit\n");
 
-        fp = fopen(repl_opts->filename, "r");
-        if(!fp)
-        {
-            fprintf(stderr, "[%s] failed to open file [%s]\n",
-                    __func__, repl_opts->filename);
-            goto CLEANUP;
-        }
-
-        while(1)
-        {
-            ssize_t read = getline(&line, &len, fp);
-            if(read == -1)
-                break;
-
-            mpc_result_t r;
-            if(mpc_parse("<stdin>", line, Lispy, &r))
-            {
-                lval* x = lval_eval(env, lval_read(r.output));
-                // TODO : need to print only the result of eval (or have print function later...)
-                lval_println(x);
-                lval_del(x);
-                mpc_ast_delete(r.output);
-            }
-            else
-            {
-                mpc_err_print(r.error);
-                mpc_err_delete(r.error);
-            }
-        }
-    }
-    else
-    {
-        fprintf(stdout, "Lispy 0.0002\n");
-        // main loop
         while(1)
         {
             char* input = readline("lispy> ");
@@ -320,7 +276,20 @@ int main(int argc, char *argv[])
         }
     }
 
-CLEANUP:
+    // list of files 
+    if(argc >= 2)
+    {
+        for(int i = 1; i < argc; ++i)
+        {
+            lval* args = lval_add(lval_sexpr(), lval_str(argv[i]));
+            lval* x    = builtin_load(env, args);
+            if(x->type == LVAL_ERR)
+                lval_println(x);
+
+            lval_del(x);
+        }
+    }
+
     // Since we quit with sigterm, we are actually letting the OS 
     // clean up after us. 
     lenv_del(env);
