@@ -38,7 +38,7 @@ $(TEST_OBJECTS): $(OBJ_DIR)/%.o : test/%.c
 .PHONY: clean
 
 repl: $(OBJECTS)
-	$(CC) $(LDFLAGS) $(INCS) $(OBJECTS) -o $(BIN_DIR)/repl $(LIBS)
+	$(CC) $(LDFLAGS) $(INCS) $(OBJECTS) -o repl $(LIBS)
 
 all: repl test
 
